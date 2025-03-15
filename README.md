@@ -1,4 +1,4 @@
-'''
+```
 project/
 ├── alpaca/
 │   ├── __init__.py
@@ -16,4 +16,4 @@ project/
 ├── backtester.py
 ├── transaction_logger.py
 ├── config.py
-'''
+```
