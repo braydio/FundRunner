@@ -14,6 +14,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
 # Local LLM API endpoint (for your custom local model)
 LOCAL_LLM_API_URL = os.getenv("LOCAL_LLM_API_URL", "http://localhost:5051/v1/chat")
+LOCAL_LLM_API_KEY= os.getenv("LOCAL_LLM_API_KEY", "your_local_llm_key")
 USE_LOCAL_LLM = os.getenv("USE_LOCAL_LLM", "false").lower() == "true"
 
 # Ticker filtering for trading bot (comma-separated strings)
@@ -33,4 +34,10 @@ NOTIFICATION_EMAIL = os.getenv("NOTIFICATION_EMAIL", "recipient@example.com")
 # Simulation settings for paper account
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "False").lower() == "true"
 SIMULATED_STARTING_CASH = float(os.getenv("SIMULATED_STARTING_CASH", "5000"))
+
+# GPT model configuration (centralized so all modules use the same model)
+GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4")
+
+# Tradier API key for live options data
+TRADIER_API_KEY = os.getenv("TRADIER_API_KEY", "your_tradier_api_key_here")
 
