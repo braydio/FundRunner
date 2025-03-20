@@ -2,13 +2,13 @@
 # live_options_api.py
 import requests
 import logging
-from config import TRADIER_API_KEY
+from config import BASE_URL, API_KEY, API_SECRET
 
 logger = logging.getLogger(__name__)
 
 def get_live_options_chain(symbol, expiration):
     """
-    Fetch live options chain data for a given symbol and expiration date using the Tradier API.
+    Fetch live options chain data for a given symbol and expiration date using the Alpaca Options API.
     
     Args:
         symbol (str): Underlying stock ticker.
@@ -17,17 +17,19 @@ def get_live_options_chain(symbol, expiration):
     Returns:
         dict: JSON data containing the options chain or None on error.
     """
-    url = "https://api.tradier.com/v1/markets/options/chains"
+    url = f"{BASE_URL}/options/contracts"
     headers = {
-        "Authorization": f"Bearer {TRADIER_API_KEY}",
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": API_SECRET,
         "Accept": "application/json"
     }
     params = {
         "symbol": symbol,
-        "expiration": expiration
+        "expiration_date": expiration
     }
     response = requests.get(url, headers=headers, params=params)
     if response.status_code != 200:
         logger.error("Error fetching live options chain data: %s", response.text)
         return None
     return response.json()
+
