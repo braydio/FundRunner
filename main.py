@@ -1,7 +1,8 @@
-
 # cli.py
 import sys
 import asyncio
+import json
+import os
 from alpaca.trade_manager import TradeManager
 from alpaca.portfolio_manager import PortfolioManager
 from alpaca.watchlist_manager import WatchlistManager
@@ -21,7 +22,6 @@ class CLI:
     def extract_account_field(self, account, field):
         return account.get(field, 'N/A') if isinstance(account, dict) else getattr(account, field, 'N/A')
 
-
     def view_account_info(self):
         try:
             account = self.portfolio_manager.view_account()
@@ -40,24 +40,50 @@ class CLI:
     def show_portfolio_status(self):
         try:
             account = self.portfolio_manager.view_account()
+            positions = self.portfolio_manager.view_positions()
             table = Table(title="Portfolio Status", style="bold green", show_edge=True)
-            table.add_column("Cash", justify="right", style="green")
-            table.add_column("Buying Power", justify="right", style="cyan")
-            table.add_column("Equity", justify="right", style="magenta")
-            table.add_column("Portfolio Value", justify="right", style="yellow")
-            table.add_row(
-                str(self.extract_account_field(account, 'cash')),
-                str(self.extract_account_field(account, 'buying_power')),
-                str(self.extract_account_field(account, 'equity')),
-                str(self.extract_account_field(account, 'portfolio_value'))
-            )
+            table.add_column("Symbol", justify="center", style="green")
+            table.add_column("Qty", justify="right", style="cyan")
+            table.add_column("Avg Entry", justify="right", style="magenta")
+            table.add_column("Current Price", justify="right", style="yellow")
+            table.add_column("$ P/L", justify="right", style="red")
+            for pos in positions:
+                symbol = str(pos.get('symbol', 'N/A'))
+                qty = pos.get('qty', 0)
+                avg_entry = pos.get('avg_entry_price', None)
+                current_price = pos.get('current_price', None)
+                if avg_entry is not None and current_price is not None:
+                    dollar_pl = (current_price - avg_entry) * qty
+                    avg_entry_str = f"{avg_entry:.2f}"
+                    current_price_str = f"{current_price:.2f}"
+                    dollar_pl_str = f"{dollar_pl:.2f}"
+                else:
+                    avg_entry_str = "N/A"
+                    current_price_str = "N/A"
+                    dollar_pl_str = "N/A"
+                table.add_row(symbol, str(qty), avg_entry_str, current_price_str, dollar_pl_str)
             self.console.print(table)
+            return {"account": account, "positions": positions}
         except Exception as e:
             self.console.print(f"[red]Error retrieving portfolio status: {e}[/red]")
+            return {}
+
+    def save_portfolio_snapshot(self):
+        snapshot = {}
+        try:
+            account = self.portfolio_manager.view_account()
+            positions = self.portfolio_manager.view_positions()
+            snapshot["account"] = account
+            snapshot["positions"] = positions
+            snapshot["portfolio_status"] = self.show_portfolio_status()
+            with open("portfolio_snapshot.json", "w") as f:
+                json.dump(snapshot, f, indent=2)
+        except Exception as e:
+            self.console.print(f"[red]Error saving portfolio snapshot: {e}[/red]")
 
     def print_menu(self):
         self.console.clear()
-        self.show_portfolio_status()
+        self.save_portfolio_snapshot()  # Save snapshot each time main menu is rendered
         menu_text = (
             "\n[bold blue]Unified Trading App[/bold blue]\n\n"
             "[bold yellow]1.[/bold yellow] View Account Information\n"
@@ -191,16 +217,37 @@ class CLI:
                 table = Table(title="Portfolio Positions & P/L", style="bold blue")
                 table.add_column("Symbol", justify="center", style="green")
                 table.add_column("Qty", justify="right", style="cyan")
-                table.add_column("Market Value", justify="right", style="magenta")
-                table.add_column("Unrealized P/L %", justify="right", style="yellow")
+                table.add_column("Market Value", justify="right", style="blue")
+                table.add_column("Avg Entry", justify="right", style="magenta")
+                table.add_column("Current Price", justify="right", style="yellow")
+                table.add_column("$ P/L", justify="right", style="red")
+                table.add_column("% P/L", justify="right", style="red")
                 for pos in positions:
-                    table.add_row(
-                        str(pos.get('symbol', 'N/A')),
-                        str(pos.get('qty', 'N/A')),
-                        str(pos.get('market_value', 'N/A')),
-                        f"{pos.get('unrealized_pl_percent', 'N/A'):.2f}%" 
-                        if isinstance(pos.get('unrealized_pl_percent'), (float, int)) else 'N/A'
-                    )
+                    symbol = str(pos.get('symbol', 'N/A'))
+                    qty = pos.get('qty', 0)
+                    market_val = pos.get('market_value', 'N/A')
+                    unrealized_pl = getattr(pos, 'unrealized_pl', 'N/A')
+                    if unrealized_pl is not None:
+                        unrealized_pl_str = f"${unrealized_pl}"
+                    avg_entry = pos.get('avg_entry_price', None)
+                    current_price = pos.get('current_price', None)
+                    if qty is not None and current_price is not None:
+                        market_val = (int(current_price) * int(qty))
+                        market_val_str = f"${market_val:.2f}"
+                    if avg_entry is not None and current_price is not None:
+                        dollar_pl = (int(current_price) - int(avg_entry)) * int(qty)
+                        avg_entry_str = f"{avg_entry:.2f}"
+                        current_price_str = f"{current_price:.2f}"
+                        dollar_pl_str = f"${dollar_pl:.2f}"
+                        market_val = int(current_price) * int(qty)
+                        market_val_str = f"${market_val}"
+                        pct_pl = (dollar_pl) / int(qty)
+                        pct_pl_str = f"{pct_pl:.2f}%"
+                    else:
+                        avg_entry_str = "N/A"
+                        current_price_str = "N/A"
+                        dollar_pl_str = "N/A"
+                    table.add_row(symbol, str(qty), market_val_str,  avg_entry_str, current_price_str, dollar_pl_str, pct_pl_str)
                 self.console.print(table)
         except Exception as e:
             self.console.print(f"[red]Error retrieving positions: {e}[/red]")
@@ -226,7 +273,7 @@ class CLI:
 
     def run_options_trading_session(self):
         try:
-            from options_integration import run_options_analysis
+            from options_trading_bot import run_options_analysis
             asyncio.run(run_options_analysis())
         except Exception as e:
             self.console.print(f"[red]Error running options trading session: {e}[/red]")
