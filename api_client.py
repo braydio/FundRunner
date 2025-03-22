@@ -1,21 +1,18 @@
+
 # api_client.py
 import alpaca_trade_api as tradeapi
 from config import API_KEY, API_SECRET, BASE_URL
 import logging
 
-# Configure logging for this module
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Create a console handler with a debug log level
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.WARNING)
 
-# Create a formatter and attach it to the handler
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 
-# Add the handler to the logger if it's not already added
 if not logger.hasHandlers():
     logger.addHandler(ch)
 
@@ -24,12 +21,25 @@ class AlpacaClient:
         logger.debug("Initializing AlpacaClient with BASE_URL: %s and API_KEY: %s", BASE_URL, API_KEY)
         self.api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL, api_version='v2')
 
+    def safe_float(self, val, default=0.0):
+        try:
+            return float(val) if val is not None else default
+        except (ValueError, TypeError):
+            return default
+
     def get_account(self):
         logger.debug("Fetching account information via GET /account")
         try:
             account = self.api.get_account()
             logger.debug("Account fetched successfully: %s", account)
-            return account
+            sanitized_account = {
+                "cash": self.safe_float(account.cash),
+                "buying_power": self.safe_float(account.buying_power),
+                "equity": self.safe_float(account.equity),
+                "portfolio_value": self.safe_float(account.portfolio_value),
+            }
+            logger.debug("Sanitized account: %s", sanitized_account)
+            return sanitized_account
         except Exception as e:
             logger.error("Error fetching account information: %s", e, exc_info=True)
             raise
@@ -55,18 +65,44 @@ class AlpacaClient:
         logger.debug("Listing all positions via GET /positions")
         try:
             positions = self.api.list_positions()
-            logger.debug("Positions retrieved: %s", positions)
-            return positions
+            sanitized_positions = []
+            for pos in positions:
+                qty = self.safe_float(pos.qty)
+                market_value = self.safe_float(pos.market_value)
+                avg_entry_price = self.safe_float(getattr(pos, 'avg_entry_price', None))
+                current_price = market_value / qty if qty > 0 else None
+                sanitized_positions.append({
+                    "symbol": pos.symbol,
+                    "qty": qty,
+                    "market_value": market_value,
+                    "avg_entry_price": avg_entry_price,
+                    "current_price": current_price,
+                    "unrealized_pl_percent": self.safe_float(getattr(pos, 'unrealized_plpc', 0)) * 100
+                })
+            logger.debug("Sanitized positions: %s", sanitized_positions)
+            return sanitized_positions
         except Exception as e:
             logger.error("Error listing positions: %s", e, exc_info=True)
             raise
-
+  
     def get_position(self, symbol):
         logger.debug("Getting position for symbol: %s", symbol)
         try:
             position = self.api.get_position(symbol)
-            logger.debug("Position for %s: %s", symbol, position)
-            return position
+            qty = self.safe_float(position.qty)
+            market_value = self.safe_float(position.market_value)
+            avg_entry_price = self.safe_float(getattr(position, 'avg_entry_price', None))
+            current_price = market_value / qty if qty > 0 else None
+            sanitized_position = {
+                "symbol": position.symbol,
+                "qty": qty,
+                "market_value": market_value,
+                "avg_entry_price": avg_entry_price,
+                "current_price": current_price,
+                "unrealized_pl_percent": self.safe_float(getattr(position, 'unrealized_plpc', 0)) * 100
+            }
+            logger.debug("Sanitized position: %s", sanitized_position)
+            return sanitized_position
         except Exception as e:
             logger.error("Error getting position for symbol %s: %s", symbol, e, exc_info=True)
             return None
@@ -154,3 +190,4 @@ class AlpacaClient:
         except Exception as e:
             logger.error("Error deleting watchlist %s: %s", watchlist_id, e, exc_info=True)
             raise
+

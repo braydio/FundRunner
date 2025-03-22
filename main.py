@@ -1,8 +1,10 @@
+
 # cli.py
 import sys
 import asyncio
 import json
 import os
+from datetime import datetime  # <-- Added import for timestamps
 from alpaca.trade_manager import TradeManager
 from alpaca.portfolio_manager import PortfolioManager
 from alpaca.watchlist_manager import WatchlistManager
@@ -38,15 +40,24 @@ class CLI:
             self.console.print(f"[red]Error retrieving account info: {e}[/red]")
 
     def show_portfolio_status(self):
+        """
+        Displays the portfolio status in a table along with the current date/time in the title.
+        """
         try:
             account = self.portfolio_manager.view_account()
             positions = self.portfolio_manager.view_positions()
-            table = Table(title="Portfolio Status", style="bold green", show_edge=True)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # <-- Get current date/time
+            table = Table(
+                title=f"Portfolio Status (as of {timestamp})",  # <-- Include timestamp in the title
+                style="bold green",
+                show_edge=True
+            )
             table.add_column("Symbol", justify="center", style="green")
             table.add_column("Qty", justify="right", style="cyan")
             table.add_column("Avg Entry", justify="right", style="magenta")
             table.add_column("Current Price", justify="right", style="yellow")
             table.add_column("$ P/L", justify="right", style="red")
+
             for pos in positions:
                 symbol = str(pos.get('symbol', 'N/A'))
                 qty = pos.get('qty', 0)
@@ -61,7 +72,9 @@ class CLI:
                     avg_entry_str = "N/A"
                     current_price_str = "N/A"
                     dollar_pl_str = "N/A"
+
                 table.add_row(symbol, str(qty), avg_entry_str, current_price_str, dollar_pl_str)
+
             self.console.print(table)
             return {"account": account, "positions": positions}
         except Exception as e:
@@ -111,6 +124,7 @@ class CLI:
             self.console.print("[bold yellow]6.[/bold yellow] Delete a Watchlist")
             self.console.print("[bold yellow]7.[/bold yellow] Back to Main Menu")
             choice = Prompt.ask("Select an option", default="7")
+
             if choice == "1":
                 try:
                     watchlists = self.watchlist_manager.list_watchlists()
@@ -122,6 +136,7 @@ class CLI:
                             self.console.print(f"ID: [bold]{wl.id}[/bold], Name: [green]{wl.name}[/green], Symbols: [cyan]{symbols}[/cyan]")
                 except Exception as e:
                     self.console.print(f"[red]Error listing watchlists: {e}[/red]")
+
             elif choice == "2":
                 name = Prompt.ask("Enter watchlist name")
                 symbols_input = Prompt.ask("Enter symbols (comma separated)")
@@ -131,6 +146,7 @@ class CLI:
                     self.console.print(f"[green]Created watchlist '{wl.name}' with ID: {wl.id}[/green]")
                 except Exception as e:
                     self.console.print(f"[red]Error creating watchlist: {e}[/red]")
+
             elif choice == "3":
                 wl_id = Prompt.ask("Enter watchlist ID (or name)")
                 symbol = Prompt.ask("Enter symbol to add").upper().strip()
@@ -139,6 +155,7 @@ class CLI:
                     self.console.print(f"[green]Added {symbol} to watchlist {wl_id}[/green]")
                 except Exception as e:
                     self.console.print(f"[red]Error adding symbol: {e}[/red]")
+
             elif choice == "4":
                 wl_id = Prompt.ask("Enter watchlist ID")
                 symbol = Prompt.ask("Enter symbol to remove").upper().strip()
@@ -147,6 +164,7 @@ class CLI:
                     self.console.print(f"[green]Removed {symbol} from watchlist {wl_id}[/green]")
                 except Exception as e:
                     self.console.print(f"[red]Error removing symbol: {e}[/red]")
+
             elif choice == "5":
                 wl_id = Prompt.ask("Enter watchlist ID")
                 try:
@@ -155,6 +173,7 @@ class CLI:
                     self.console.print(f"Watchlist '[green]{watchlist.name}[/green]': {assets}")
                 except Exception as e:
                     self.console.print(f"[red]Error retrieving watchlist: {e}[/red]")
+
             elif choice == "6":
                 wl_id = Prompt.ask("Enter watchlist ID to delete")
                 try:
@@ -162,6 +181,7 @@ class CLI:
                     self.console.print(f"[green]Deleted watchlist with ID: {wl_id}[/green]")
                 except Exception as e:
                     self.console.print(f"[red]Error deleting watchlist: {e}[/red]")
+
             elif choice == "7":
                 break
             else:
@@ -209,12 +229,19 @@ class CLI:
             self.console.print(f"[red]Error retrieving open orders: {e}[/red]")
 
     def view_positions(self):
+        """
+        Displays positions in a table along with the current date/time in the title.
+        """
         try:
             positions = self.portfolio_manager.view_positions()
             if not positions:
                 self.console.print("[red]No positions found.[/red]")
             else:
-                table = Table(title="Portfolio Positions & P/L", style="bold blue")
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # <-- Get current date/time
+                table = Table(
+                    title=f"Portfolio Positions & P/L (as of {timestamp})",  # <-- Include timestamp in the title
+                    style="bold blue"
+                )
                 table.add_column("Symbol", justify="center", style="green")
                 table.add_column("Qty", justify="right", style="cyan")
                 table.add_column("Market Value", justify="right", style="blue")
@@ -222,6 +249,7 @@ class CLI:
                 table.add_column("Current Price", justify="right", style="yellow")
                 table.add_column("$ P/L", justify="right", style="red")
                 table.add_column("% P/L", justify="right", style="red")
+
                 for pos in positions:
                     symbol = str(pos.get('symbol', 'N/A'))
                     qty = pos.get('qty', 0)
@@ -231,23 +259,39 @@ class CLI:
                         unrealized_pl_str = f"${unrealized_pl}"
                     avg_entry = pos.get('avg_entry_price', None)
                     current_price = pos.get('current_price', None)
+
+                    # Initialize placeholders
+                    avg_entry_str = "N/A"
+                    current_price_str = "N/A"
+                    dollar_pl_str = "N/A"
+                    pct_pl_str = "N/A"
+
                     if qty is not None and current_price is not None:
-                        market_val = (int(current_price) * int(qty))
-                        market_val_str = f"${market_val:.2f}"
-                    if avg_entry is not None and current_price is not None:
-                        dollar_pl = (int(current_price) - int(avg_entry)) * int(qty)
-                        avg_entry_str = f"{avg_entry:.2f}"
-                        current_price_str = f"{current_price:.2f}"
-                        dollar_pl_str = f"${dollar_pl:.2f}"
-                        market_val = int(current_price) * int(qty)
-                        market_val_str = f"${market_val}"
-                        pct_pl = (dollar_pl) / int(qty)
-                        pct_pl_str = f"{pct_pl:.2f}%"
+                        try:
+                            market_val_calc = float(current_price) * float(qty)
+                            market_val_str = f"${market_val_calc:.2f}"
+                        except:
+                            market_val_str = "N/A"
                     else:
-                        avg_entry_str = "N/A"
-                        current_price_str = "N/A"
-                        dollar_pl_str = "N/A"
+                        market_val_str = "N/A"
+
+                    if avg_entry is not None and current_price is not None:
+                        try:
+                            avg_entry_val = float(avg_entry)
+                            current_price_val = float(current_price)
+                            dollar_pl = (current_price_val - avg_entry_val) * float(qty)
+                            avg_entry_str = f"{avg_entry_val:.2f}"
+                            current_price_str = f"{current_price_val:.2f}"
+                            dollar_pl_str = f"${dollar_pl:.2f}"
+                            pct_pl = 0.0
+                            if avg_entry_val != 0:
+                                pct_pl = (current_price_val - avg_entry_val) / avg_entry_val * 100
+                            pct_pl_str = f"{pct_pl:.2f}%"
+                        except:
+                            pass
+
                     table.add_row(symbol, str(qty), market_val_str,  avg_entry_str, current_price_str, dollar_pl_str, pct_pl_str)
+
                 self.console.print(table)
         except Exception as e:
             self.console.print(f"[red]Error retrieving positions: {e}[/red]")
@@ -317,49 +361,4 @@ class CLI:
 if __name__ == "__main__":
     cli = CLI()
     cli.run()
-# End cli.py
 
-
-# Begin main.py
-# main.py
-
-# main.py
-from cli import CLI
-
-def main():
-    app = CLI()
-    app.run()
-
-
-if __name__ == "__main__":
-    main()
-
-# End main.py
-
-
-# Begin alpaca_bot.py
-# alpaca_bot.py
-import asyncio
-from alpaca.trading_bot import TradingBot
-
-async def main():
-    # Define the list of symbols to evaluate
-    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA"]
-    # Initialize the bot (set auto_confirm=False for manual confirmation)
-    print(f"TradingBot loaded from {TradingBot.__module__}")
-    bot = TradingBot(auto_confirm=False)
-    
-    # Optionally, get advice from ChatGPT before trading begins
-    advice = bot.get_chatgpt_advice(
-        "Please provide a review of the current account risk profile and suggest any adjustments."
-    )
-    print("ChatGPT Advisor:", advice)
-    
-    # Run the trading bot for the specified symbols
-    await bot.run(symbols)
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
-
-# End alpaca_bot.py
