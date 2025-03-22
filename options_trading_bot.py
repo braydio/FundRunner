@@ -1,11 +1,10 @@
-
 # options_trading_bot.py
 import asyncio
 import logging
 from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt
-from options_integration import evaluate_option_strategy, evaluate_options_for_multiple_tickers
+from options_integration import evaluate_option_strategy, evaluate_options_for_multiple_tickers, analyze_sentiment
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -24,10 +23,15 @@ async def run_options_analysis():
     tickers_input = Prompt.ask("Enter underlying tickers (comma separated)", default="AAPL,MSFT,GOOGL")
     tickers = [ticker.strip().upper() for ticker in tickers_input.split(",") if ticker.strip()]
     
-    # Prompt for expiration; if provided, bot will use it, otherwise will choose automatically.
-    expiry = Prompt.ask("Enter desired expiry (YYYY-MM-DD) (or leave blank for automatic selection)", default="")
+    # Date: default to automatic selection (which now picks Friday at least 4 weeks out)
+    expiry = Prompt.ask("Enter desired expiry (YYYY-MM-DD) (or leave blank for automatic Friday selection)", default="")
     
-    # No strike prompt now – strikes will be auto‐selected.
+    # Determine sentiment from recent activity for each ticker and prompt for override
+    sentiments = {}
+    for ticker in tickers:
+        default_sent = analyze_sentiment(ticker)
+        override = Prompt.ask(f"Default sentiment for {ticker} is {default_sent}. Override? (bullish/bearish/neutral)", default=default_sent)
+        sentiments[ticker] = override.lower()
     
     # Prompt for options trade style
     console.print("Select options trade style:")
@@ -47,23 +51,15 @@ async def run_options_analysis():
         }
         styles = [mapping.get(style_choice, "long")]
 
-    # Build base trade details template – only expiration is provided (if any); strikes will be determined automatically.
+    # Build base trade details template – only expiration is provided; strikes auto-selected.
     base_trade_details = {
         "expiry": expiry,
-        "option_type": "call",  # default for long options; evaluation functions adjust as needed
+        "option_type": "call",  # default; later override based on sentiment for long trades
         "position": "long",     # default for long
     }
     
-    # Set strategy in base trade details for each evaluation.
-    # (If no additional parameters are provided, the evaluation functions auto-select strikes.)
-    if "long" in styles:
-        base_trade_details["strategy"] = "long"
-    elif "credit_spread" in styles:
-        base_trade_details["strategy"] = "credit_spread"
-    elif "debit_spread" in styles:
-        base_trade_details["strategy"] = "debit_spread"
-    elif "iron_condor" in styles:
-        base_trade_details["strategy"] = "iron_condor"
+    # For each ticker, if sentiment is bearish and strategy is long, change option_type to put.
+    # We'll incorporate that logic during evaluation.
     
     # Evaluate options for each style and each ticker.
     results = {}
@@ -72,16 +68,25 @@ async def run_options_analysis():
     table.add_column("Style", style="cyan")
     table.add_column("Metric", style="magenta")
     table.add_column("Result", style="yellow")
+    table.add_column("Leg Details", style="blue")
     
     for style in styles:
+        # Copy base details and set strategy
         trade_details = base_trade_details.copy()
         trade_details["strategy"] = style
-        evaluations = evaluate_options_for_multiple_tickers(tickers, trade_details)
-        results[style] = evaluations
-        for ticker, result in evaluations.items():
+        # For long options, adjust option type based on sentiment (default bullish->call, bearish->put)
+        for ticker in tickers:
+            if style == "long":
+                sentiment = sentiments.get(ticker, "bullish")
+                trade_details["option_type"] = "call" if sentiment == "bullish" else "put"
+            # Evaluate for each ticker independently
+            evals = evaluate_options_for_multiple_tickers([ticker], trade_details)
+            results.setdefault(style, {})[ticker] = evals.get(ticker, {})
+            result = evals.get(ticker, {})
             if "error" in result:
                 metric = "Error"
                 res_str = result["error"]
+                leg_str = "N/A"
             else:
                 if style == "long":
                     metric = "Profit Ratio"
@@ -92,7 +97,22 @@ async def run_options_analysis():
                 else:
                     metric = "N/A"
                     res_str = "N/A"
-            table.add_row(ticker, style, metric, res_str)
+                # For spreads, summarize leg details (e.g., strikes and delta for each leg)
+                if style == "credit_spread":
+                    leg_info = result.get("leg_details", {})
+                    leg_str = f"Short@{leg_info.get('short', {}).get('strike', 'N/A')} (δ={leg_info.get('short', {}).get('greeks', {}).get('delta', 'N/A'):.2f}), Long@{leg_info.get('long', {}).get('strike', 'N/A')} (δ={leg_info.get('long', {}).get('greeks', {}).get('delta', 'N/A'):.2f})"
+                elif style == "debit_spread":
+                    leg_info = result.get("leg_details", {})
+                    leg_str = f"Buy@{leg_info.get('buy', {}).get('strike', 'N/A')} (δ={leg_info.get('buy', {}).get('greeks', {}).get('delta', 'N/A'):.2f}), Sell@{leg_info.get('sell', {}).get('strike', 'N/A')} (δ={leg_info.get('sell', {}).get('greeks', {}).get('delta', 'N/A'):.2f})"
+                elif style == "iron_condor":
+                    leg_info = result.get("leg_details", {})
+                    leg_str = (f"SC@{leg_info.get('short_call', {}).get('strike', 'N/A')} (δ={leg_info.get('short_call', {}).get('greeks', {}).get('delta', 'N/A'):.2f}), "
+                               f"LC@{leg_info.get('long_call', {}).get('strike', 'N/A')} (δ={leg_info.get('long_call', {}).get('greeks', {}).get('delta', 'N/A'):.2f}), "
+                               f"SP@{leg_info.get('short_put', {}).get('strike', 'N/A')} (δ={leg_info.get('short_put', {}).get('greeks', {}).get('delta', 'N/A'):.2f}), "
+                               f"LP@{leg_info.get('long_put', {}).get('strike', 'N/A')} (δ={leg_info.get('long_put', {}).get('greeks', {}).get('delta', 'N/A'):.2f})")
+                else:
+                    leg_str = "N/A"
+            table.add_row(ticker, style, metric, res_str, leg_str)
             console.print(f"Evaluated {style} for {ticker}: {result}")
             await asyncio.sleep(1)
     console.print(table)
