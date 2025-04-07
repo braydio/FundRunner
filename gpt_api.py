@@ -24,7 +24,7 @@ if not openai.api_key and not USE_LOCAL_LLM:
 # Log file for GPT requests and responses
 gpt_request_log_path = os.path.join(project_dir, "gpt_requests.log")
 
-def count_tokens(prompt, model="gpt-4"):
+def count_tokens(prompt, model="gpt-4o-mini"):
     try:
         encoding = tiktoken.encoding_for_model(model)
     except Exception:
