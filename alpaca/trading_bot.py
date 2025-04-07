@@ -58,6 +58,7 @@ class TradingBot:
         self.vetter = LLMVetter(vendor=vetter_vendor)
         self.risk_manager = RiskManager(base_allocation_limit=allocation_limit, base_risk_threshold=risk_threshold)
         self.session_summary = []  # List of dicts with evaluation/execution info
+        self.trade_tracker = []    # New: list to track detailed trade info
 
         self.console = Console()
         self.summary_table = None  # Table for trade evaluations
@@ -139,6 +140,41 @@ class TradingBot:
             table.add_row(symbol, str(qty), avg_entry_str, current_price_str, dollar_pl_str)
         return table
 
+    def generate_trade_tracker_table(self):
+        """
+        Returns a table summarizing all tracked trade details (entry price, stop loss, profit target, ES, status).
+        """
+        table = Table(title="Trade Tracker", style="bold white")
+        table.add_column("Symbol", justify="center", style="green")
+        table.add_column("Entry Price", justify="right", style="cyan")
+        table.add_column("Stop Loss", justify="right", style="red")
+        table.add_column("Profit Target", justify="right", style="magenta")
+        table.add_column("ES Metric", justify="right", style="yellow")
+        table.add_column("Status", justify="center", style="bold")
+        for trade in self.trade_tracker:
+            entry = f"{trade.get('entry_price', '-'):.2f}" if trade.get('entry_price') is not None else "-"
+            stop = f"{trade.get('stop_loss', '-'):.2f}" if trade.get('stop_loss') is not None else "-"
+            target = f"{trade.get('profit_target', '-'):.2f}" if trade.get('profit_target') is not None else "-"
+            es_val = f"{trade.get('expected_shortfall', '-'):.4f}" if trade.get('expected_shortfall') is not None else "-"
+            status = trade.get("status", "Pending")
+            table.add_row(trade["symbol"], entry, stop, target, es_val, status)
+        return table
+
+    def generate_layout(self):
+        """
+        Creates a layout that includes:
+          - Trade Evaluation Summary (left)
+          - Trade Tracker (center)
+          - Live Portfolio Positions (right)
+        """
+        layout = Layout()
+        layout.split_row(
+            Layout(Panel(self.summary_table, title="Trade Evaluations"), name="left"),
+            Layout(Panel(self.generate_trade_tracker_table(), title="Trade Tracker"), name="center"),
+            Layout(Panel(self.generate_portfolio_table(), title="Portfolio Positions"), name="right")
+        )
+        return layout
+
     def get_ticker_list(self, symbols=None):
         self.logger.info("Getting ticker list. Provided symbols: %s", symbols)
         if symbols and len(symbols) > 0:
@@ -151,7 +187,6 @@ class TradingBot:
             self.logger.info("Querying LLM for default tickers with prompt: %s", prompt)
             response = get_account_overview(prompt)
             self.logger.debug("LLM default tickers response: %s", response)
-            import re
             tickers = re.findall(r'\b[A-Z]{2,5}\b', response) if response else []
             if tickers:
                 self.logger.info("Using default tickers from LLM: %s", tickers)
@@ -183,12 +218,14 @@ class TradingBot:
         except Exception as e:
             self.logger.error("Error parsing buying power for %s: %s", symbol, e)
             return None
+        # Compute equity trade metrics using historical data
         try:
             hist = yf.download(symbol, period="1mo", interval="1d", auto_adjust=False)
             if hist.empty:
                 self.logger.warning("No historical data for %s", symbol)
                 probability_of_profit = 0.55
                 expected_net_value = 0.02
+                es_metric = None
             else:
                 returns = hist['Close'].pct_change().dropna()
                 mean_return = returns.mean().item() if hasattr(returns.mean(), 'item') else float(returns.mean())
@@ -199,11 +236,15 @@ class TradingBot:
                 else:
                     probability_of_profit = 0.5
                 expected_net_value = max(mean_return, 0)
-            self.logger.info("For %s: probability=%.2f, expected_net=%.4f", symbol, probability_of_profit, expected_net_value)
+                # Calculate Value at Risk (VaR) at 5% level and Expected Shortfall (ES)
+                var_5 = returns.quantile(0.05)
+                es_metric = returns[returns <= var_5].mean()  # average of worst 5% losses
+            self.logger.info("For %s: probability=%.2f, expected_net=%.4f, ES=%.4f", symbol, probability_of_profit, expected_net_value, es_metric if es_metric is not None else -999)
         except Exception as e:
             self.logger.error("Error computing metrics for %s: %s", symbol, e)
             probability_of_profit = 0.55
             expected_net_value = 0.02
+            es_metric = None
         if probability_of_profit < adjusted_risk_threshold or expected_net_value <= 0:
             self.logger.info("Trade for %s rejected: probability=%.2f, expected_net=%.4f", symbol, probability_of_profit, expected_net_value)
             return None
@@ -219,6 +260,7 @@ class TradingBot:
         if qty < 1:
             self.logger.info("Insufficient buying power for %s", symbol)
             return None
+        # Set stop loss and profit target values
         stop_loss = current_price * 0.95
         profit_target = current_price * 1.10
         trade_details = {
@@ -231,8 +273,14 @@ class TradingBot:
             "expected_net_value": expected_net_value,
             "current_price": current_price,
             "stop_loss": stop_loss,
-            "profit_target": profit_target
+            "profit_target": profit_target,
+            "entry_price": current_price,  # Record the initial entry price
+            "expected_shortfall": es_metric  # New ES metric for trade evaluation
         }
+        # Add trade to tracker with status pending
+        trade_tracker_entry = trade_details.copy()
+        trade_tracker_entry["status"] = "Pending"
+        self.trade_tracker.append(trade_tracker_entry)
         self.logger.info("Trade evaluated for %s: %s", symbol, trade_details)
         return trade_details
 
@@ -282,6 +330,11 @@ class TradingBot:
             from transaction_logger import log_transaction
             log_transaction(trade_details, order)
             self.session_summary.append({"ticker": symbol, "action": "Executed", "details": str(trade_details)})
+            # Update trade tracker status to Executed
+            for trade in self.trade_tracker:
+                if trade["symbol"] == symbol and trade["status"] == "Pending":
+                    trade["status"] = "Executed"
+                    break
             if self.notify_on_trade:
                 self.send_trade_notification(trade_details, order)
             return order
@@ -330,14 +383,6 @@ class TradingBot:
             table.add_row(str(trade.get("ticker")), str(trade.get("action")), details if details else pl)
         console.print(table)
 
-    def generate_layout(self):
-        layout = Layout()
-        layout.split_row(
-            Layout(Panel(self.summary_table, title="Trade Evaluations"), name="left"),
-            Layout(Panel(self.generate_portfolio_table(), title="Portfolio Positions"), name="right")
-        )
-        return layout
-
     async def run(self, symbols=None):
         self.logger.info("Trading bot started.")
         ticker_list = self.get_ticker_list(symbols)
@@ -345,8 +390,6 @@ class TradingBot:
         self.init_summary_table(ticker_list)
 
         monitor_task = asyncio.create_task(self.monitor_positions())
-        # Use Live with a dynamic layout that shows both evaluation summary and portfolio positions.
-        from rich.live import Live
         live = Live(self.generate_layout(), refresh_per_second=2, console=self.console)
         live.start()
         try:
@@ -360,9 +403,9 @@ class TradingBot:
                         decision = "Approved" if approved else "Rejected by LLM"
                         if not approved:
                             self.update_summary_row(symbol, trade_details["current_price"],
-                                                    trade_details["probability_of_profit"],
-                                                    trade_details["expected_net_value"],
-                                                    decision)
+                                                     trade_details["probability_of_profit"],
+                                                     trade_details["expected_net_value"],
+                                                     decision)
                             continue
                     confirmed = await self.confirm_trade(trade_details)
                     if confirmed:
@@ -376,7 +419,6 @@ class TradingBot:
                                             decision)
                 else:
                     self.update_summary_row(symbol, "-", "-", "-", "No Trade")
-                # Update live layout with refreshed tables.
                 live.update(self.generate_layout())
                 await asyncio.sleep(5)
         finally:
@@ -390,5 +432,4 @@ class TradingBot:
         advice = get_account_overview(prompt)
         self.logger.info("Received trading advice: %s", advice)
         return advice
-
 
