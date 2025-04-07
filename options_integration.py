@@ -69,15 +69,12 @@ def monte_carlo_prob_ITM(S, K, T, r, sigma, option_type, simulations=10000):
     """
     Estimate probability that option finishes ITM using Monte Carlo simulation.
     """
-    dt = T
-    # Generate random normal draws
     Z = np.random.normal(0, 1, simulations)
     S_T = S * np.exp((r - 0.5 * sigma**2)*T + sigma * math.sqrt(T) * Z)
     if option_type == "call":
-        prob = np.mean(S_T > K)
+        return np.mean(S_T > K)
     else:
-        prob = np.mean(S_T < K)
-    return prob
+        return np.mean(S_T < K)
 
 def get_nearest_expiry(ticker, requested_expiry):
     try:
@@ -219,6 +216,32 @@ def monte_carlo_prob_ITM(S, K, T, r, sigma, option_type, simulations=10000):
     else:
         return np.mean(S_T < K)
 
+def format_primary_metric(evaluation: dict, primary_key: str, other_keys: list) -> dict:
+    """
+    Given an evaluation dictionary and a primary metric key (e.g., 'profit_ratio'),
+    along with other metric keys (e.g., ['adjusted_probability', 'expected_return']),
+    compute the total magnitude and then compute a score and weight for the primary metric.
+    The function adds a new key '{primary_key}_formatted' with a string showing the value rounded
+    to 2 decimals along with its Score and Weight.
+    """
+    try:
+        primary_value = evaluation.get(primary_key)
+        if primary_value is None:
+            return evaluation
+        primary_value = float(primary_value)
+        metric_magnitudes = [abs(primary_value)]
+        for key in other_keys:
+            val = evaluation.get(key)
+            if val is not None:
+                metric_magnitudes.append(abs(float(val)))
+        total = sum(metric_magnitudes)
+        score = abs(primary_value)
+        weight = (score / total) if total > 0 else 0
+        evaluation[f"{primary_key}_formatted"] = f"{primary_value:.2f} (Score: {score:.2f}, Weight: {weight:.2f})"
+    except Exception as e:
+        logger.error("Error formatting primary metric: %s", e)
+    return evaluation
+
 def evaluate_option_trade(trade_details):
     """
     Evaluate a long option trade (call or put) using yfinance data.
@@ -273,7 +296,6 @@ def evaluate_option_trade(trade_details):
     r = 0.01
     sigma = implied_vol if implied_vol else 0.2
     greeks = black_scholes_greeks(S, strike, T, r, sigma, option_type)
-    # Compute analytic probability of finishing ITM:
     d2 = greeks.get("d2")
     if option_type == "call":
         analytic_prob = norm_cdf(d2)
@@ -303,7 +325,7 @@ def evaluate_option_trade(trade_details):
                  underlying, option_type, strike, option_price, intrinsic_value, extrinsic_value, intrinsic_ratio,
                  analytic_prob, mc_prob, base_prob, adjusted_probability, profit_ratio or 0, expected_return or 0)
     
-    return {
+    result = {
         "option_price": option_price,
         "implied_volatility": implied_vol,
         "time_to_expiry_years": T,
@@ -321,6 +343,9 @@ def evaluate_option_trade(trade_details):
         "selected_strike": strike,
         "option_type": option_type
     }
+    # Format the primary metric (profit_ratio) using related metrics.
+    result = format_primary_metric(result, "profit_ratio", ["adjusted_probability", "expected_return"])
+    return result
 
 def evaluate_credit_spread(trade_details, live=False):
     """
@@ -331,7 +356,6 @@ def evaluate_credit_spread(trade_details, live=False):
     underlying = trade_details.get("underlying")
     requested_expiry = trade_details.get("expiry", "")
     expiry_str = get_nearest_expiry(underlying, requested_expiry)
-    # For spreads, use option_type based on sentiment:
     option_type = trade_details.get("option_type", None)
     if not option_type:
         sentiment = trade_details.get("sentiment", "bullish")
@@ -417,11 +441,9 @@ def evaluate_credit_spread(trade_details, live=False):
     max_loss = spread_width - credit_received if spread_width > credit_received else 0
     risk_reward_ratio = credit_received / max_loss if max_loss else None
 
-    # For the short leg, compute ITM probability using analytic and Monte Carlo estimates:
     t = yf.Ticker(underlying)
     S = t.info.get("regularMarketPrice")
     r = 0.01
-    # Use the parameters from the short leg option:
     opt_info = leg_short.get("greeks", {})
     d2 = opt_info.get("d2", None)
     sigma = leg_short.get("impliedVolatility", 0.2) or 0.2
@@ -432,7 +454,6 @@ def evaluate_credit_spread(trade_details, live=False):
         analytic_prob_short = 0.5
     mc_prob_short = monte_carlo_prob_ITM(S, strike_short, T, r, sigma, option_type)
     short_itm_prob = (analytic_prob_short + mc_prob_short) / 2
-    # For a short spread, probability of profit = 1 - probability short finishes ITM.
     base_prob = 1 - short_itm_prob
 
     intrinsic_short = max(S - strike_short, 0) if option_type=="call" else max(strike_short - S, 0)
@@ -445,7 +466,7 @@ def evaluate_credit_spread(trade_details, live=False):
     logger.debug("Credit spread for %s: short strike=%s, long strike=%s, credit=%.2f, risk/reward=%.2f, base_prob=%.2f, intrinsic_ratio=%.2f, adjusted_prob=%.2f, expected_return=%.2f",
                  underlying, strike_short, strike_long, credit_received, risk_reward_ratio or 0, base_prob, intrinsic_ratio, adjusted_probability, expected_return or 0)
     
-    return {
+    result = {
         "credit_received": credit_received,
         "max_profit": max_profit,
         "max_loss": max_loss,
@@ -459,6 +480,8 @@ def evaluate_credit_spread(trade_details, live=False):
         "option_type": option_type,
         "intrinsic_ratio": intrinsic_ratio
     }
+    result = format_primary_metric(result, "risk_reward_ratio", ["adjusted_probability", "expected_return"])
+    return result
 
 def evaluate_debit_spread(trade_details):
     """
@@ -524,8 +547,14 @@ def evaluate_debit_spread(trade_details):
     max_profit = (strike_sell - strike_buy) - net_debit if strike_sell > strike_buy else net_debit
     risk_reward_ratio = max_profit / net_debit if net_debit != 0 else None
 
-    # For debit spread, break-even for a bull call is strike_buy + net_debit (for call) and for bear put is strike_buy - net_debit.
-    if option_type=="call":
+    import datetime
+    expiry_date = datetime.datetime.strptime(expiry_str, "%Y-%m-%d")
+    today = datetime.datetime.today()
+    T = (expiry_date - today).days / 365.0
+    sigma = leg_buy.get("impliedVolatility", 0.2) or 0.2
+    r = 0.01
+
+    if option_type == "call":
         break_even = strike_buy + net_debit
         analytic_prob = norm_cdf((math.log(underlying_price/break_even) + (r - 0.5*sigma**2)*T) / (sigma*math.sqrt(T)))
         mc_prob = monte_carlo_prob_ITM(underlying_price, break_even, T, r, sigma, "call")
@@ -550,7 +579,7 @@ def evaluate_debit_spread(trade_details):
     logger.debug("Debit spread for %s: strike_buy=%s, strike_sell=%s, net_debit=%.2f, risk/reward=%.2f, break-even=%.2f, base_prob=%.2f, intrinsic_ratio=%.2f, adjusted_prob=%.2f, expected_return=%.2f",
                  underlying, strike_buy, strike_sell, net_debit, risk_reward_ratio or 0, break_even, base_prob, intrinsic_ratio, adjusted_probability, expected_return or 0)
     
-    return {
+    result = {
         "net_debit": net_debit,
         "max_profit": max_profit,
         "risk_reward_ratio": risk_reward_ratio,
@@ -561,6 +590,8 @@ def evaluate_debit_spread(trade_details):
         "option_type": option_type,
         "intrinsic_ratio": intrinsic_ratio
     }
+    result = format_primary_metric(result, "risk_reward_ratio", ["adjusted_probability", "expected_return"])
+    return result
 
 def evaluate_iron_condor(trade_details):
     """
@@ -642,7 +673,7 @@ def evaluate_iron_condor(trade_details):
                  underlying, strike_short_call, strike_long_call, strike_short_put, strike_long_put,
                  net_credit, max_loss, risk_reward_ratio or 0, intrinsic_ratio, adjusted_probability, expected_return or 0)
     
-    return {
+    result = {
         "net_credit": net_credit,
         "max_profit": net_credit,
         "max_loss": max_loss,
@@ -664,6 +695,8 @@ def evaluate_iron_condor(trade_details):
         "option_types": {"call": "call", "put": "put"},
         "intrinsic_ratio": intrinsic_ratio
     }
+    result = format_primary_metric(result, "risk_reward_ratio", [])
+    return result
 
 def evaluate_option_strategy(trade_details, live=False):
     """
@@ -697,7 +730,6 @@ def evaluate_options_for_multiple_tickers(tickers, base_trade_details):
     for ticker in tickers:
         trade_details = base_trade_details.copy()
         trade_details["underlying"] = ticker
-        # For spreads, if sentiment is provided, adjust option type accordingly.
         if base_trade_details.get("strategy") in ["credit_spread", "debit_spread", "iron_condor"]:
             sentiment = base_trade_details.get("sentiment", "bullish")
             trade_details["option_type"] = "put" if sentiment=="bearish" else "call"
