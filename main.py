@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt
+from config import SIMULATED_STARTING_CASH, SIMULATION_MODE
 
 class CLI:
     def __init__(self):
@@ -27,11 +28,29 @@ class CLI:
     def view_account_info(self):
         try:
             account = self.portfolio_manager.view_account()
+            positions = self.portfolio_manager.view_positions()
+            # Compute overall P/L from positions (sum of (current_price - avg_entry)*qty)
+            overall_pl = 0.0
+            for pos in positions:
+                avg_entry = pos.get('avg_entry_price')
+                current_price = pos.get('current_price')
+                qty = pos.get('qty', 0)
+                if avg_entry is not None and current_price is not None:
+                    overall_pl += (current_price - avg_entry) * qty
+            # If in simulation mode, include cash change relative to SIMULATED_STARTING_CASH
+            if SIMULATION_MODE:
+                cash = self.extract_account_field(account, 'cash')
+                try:
+                    overall_pl += float(cash) - SIMULATED_STARTING_CASH
+                except Exception:
+                    pass
+
             info_panel = Panel.fit(
                 f"[bold green]Cash:[/bold green] {self.extract_account_field(account, 'cash')}\n"
                 f"[bold cyan]Buying Power:[/bold cyan] {self.extract_account_field(account, 'buying_power')}\n"
                 f"[bold magenta]Equity:[/bold magenta] {self.extract_account_field(account, 'equity')}\n"
-                f"[bold yellow]Portfolio Value:[/bold yellow] {self.extract_account_field(account, 'portfolio_value')}",
+                f"[bold yellow]Portfolio Value:[/bold yellow] {self.extract_account_field(account, 'portfolio_value')}\n"
+                f"[bold red]Overall P/L:[/bold red] {overall_pl:.2f}",
                 title="[bold red]Account Information[/bold red]",
                 border_style="green"
             )
@@ -42,6 +61,7 @@ class CLI:
     def show_portfolio_status(self):
         """
         Displays the portfolio status in a table along with the current date/time in the title.
+        Also computes overall P/L from all positions.
         """
         try:
             account = self.portfolio_manager.view_account()
@@ -58,6 +78,7 @@ class CLI:
             table.add_column("Current Price", justify="right", style="yellow")
             table.add_column("$ P/L", justify="right", style="red")
 
+            overall_pl = 0.0
             for pos in positions:
                 symbol = str(pos.get('symbol', 'N/A'))
                 qty = pos.get('qty', 0)
@@ -65,6 +86,7 @@ class CLI:
                 current_price = pos.get('current_price', None)
                 if avg_entry is not None and current_price is not None:
                     dollar_pl = (current_price - avg_entry) * qty
+                    overall_pl += dollar_pl
                     avg_entry_str = f"{avg_entry:.2f}"
                     current_price_str = f"{current_price:.2f}"
                     dollar_pl_str = f"{dollar_pl:.2f}"
@@ -74,8 +96,9 @@ class CLI:
                     dollar_pl_str = "N/A"
 
                 table.add_row(symbol, str(qty), avg_entry_str, current_price_str, dollar_pl_str)
-
+            # Append overall P/L as a separate row or print after the table
             self.console.print(table)
+            self.console.print(f"[bold red]Overall Account P/L: {overall_pl:.2f}[/bold red]")
             return {"account": account, "positions": positions}
         except Exception as e:
             self.console.print(f"[red]Error retrieving portfolio status: {e}[/red]")
