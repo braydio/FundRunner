@@ -1,3 +1,4 @@
+
 # options_trading_bot.py
 import asyncio
 import logging
@@ -58,9 +59,6 @@ async def run_options_analysis():
         "position": "long",     # default for long
     }
     
-    # For each ticker, if sentiment is bearish and strategy is long, change option_type to put.
-    # We'll incorporate that logic during evaluation.
-    
     # Evaluate options for each style and each ticker.
     results = {}
     table = Table(title="Options Evaluation Results", show_lines=True)
@@ -71,15 +69,12 @@ async def run_options_analysis():
     table.add_column("Leg Details", style="blue")
     
     for style in styles:
-        # Copy base details and set strategy
         trade_details = base_trade_details.copy()
         trade_details["strategy"] = style
-        # For long options, adjust option type based on sentiment (default bullish->call, bearish->put)
         for ticker in tickers:
             if style == "long":
                 sentiment = sentiments.get(ticker, "bullish")
                 trade_details["option_type"] = "call" if sentiment == "bullish" else "put"
-            # Evaluate for each ticker independently
             evals = evaluate_options_for_multiple_tickers([ticker], trade_details)
             results.setdefault(style, {})[ticker] = evals.get(ticker, {})
             result = evals.get(ticker, {})
@@ -90,14 +85,13 @@ async def run_options_analysis():
             else:
                 if style == "long":
                     metric = "Profit Ratio"
-                    res_str = f"{result.get('profit_ratio', 'N/A'):.2f}"
+                    res_str = result.get("profit_ratio_formatted", "N/A")
                 elif style in ["credit_spread", "debit_spread", "iron_condor"]:
                     metric = "Risk Reward"
-                    res_str = f"{result.get('risk_reward_ratio', 'N/A'):.2f}"
+                    res_str = result.get("risk_reward_ratio_formatted", "N/A")
                 else:
                     metric = "N/A"
                     res_str = "N/A"
-                # For spreads, summarize leg details (e.g., strikes and delta for each leg)
                 if style == "credit_spread":
                     leg_info = result.get("leg_details", {})
                     leg_str = f"Short@{leg_info.get('short', {}).get('strike', 'N/A')} (δ={leg_info.get('short', {}).get('greeks', {}).get('delta', 'N/A'):.2f}), Long@{leg_info.get('long', {}).get('strike', 'N/A')} (δ={leg_info.get('long', {}).get('greeks', {}).get('delta', 'N/A'):.2f})"
@@ -117,16 +111,38 @@ async def run_options_analysis():
             await asyncio.sleep(1)
     console.print(table)
     
-    exec_choice = Prompt.ask("Simulate executing one of these trades? (y/n)", default="n")
+    # Options order execution (unchanged from previous logic)
+    exec_choice = Prompt.ask("Execute options trade? (y/n)", default="n")
     if exec_choice.lower() == "y":
         chosen_ticker = Prompt.ask("Enter the ticker to execute")
         chosen_style = Prompt.ask("Enter the style to execute", choices=styles)
         evals = evaluate_options_for_multiple_tickers([chosen_ticker], base_trade_details)
         result = evals.get(chosen_ticker, {})
         if result and "error" not in result:
-            console.print(f"[green]Simulated execution for {chosen_ticker} with style {chosen_style}: {result}[/green]")
+            underlying = chosen_ticker
+            expiry_str = result.get("evaluated_expiry")
+            strike = result.get("selected_strike")
+            option_type = result.get("option_type")
+            from options_order_executor import get_contract_symbol, place_options_order
+            contract_symbol = get_contract_symbol(underlying, expiry_str, strike, option_type)
+            if not contract_symbol:
+                console.print(f"[red]Could not find options contract symbol for {chosen_ticker}[/red]")
+            else:
+                qty_str = Prompt.ask("Enter quantity for the options trade", default="1")
+                try:
+                    qty = int(qty_str)
+                except Exception:
+                    qty = 1
+                side = "buy"  
+                order_type = "market"
+                time_in_force = "gtc"
+                order = place_options_order(contract_symbol, qty, side, order_type, time_in_force)
+                if order and "error" not in order:
+                    console.print(f"[green]Order executed for {chosen_ticker} with style {chosen_style}: {order}[/green]")
+                else:
+                    console.print(f"[red]Order execution failed for {chosen_ticker}: {order.get('error', 'Unknown error')}[/red]")
         else:
-            console.print(f"[red]Execution simulation failed for {chosen_ticker}: {result.get('error', 'Unknown error')}[/red]")
+            console.print(f"[red]Execution failed for {chosen_ticker}: {result.get('error', 'Unknown error')}[/red]")
     
     cont_choice = Prompt.ask("Run another scan? (y/n)", default="y")
     if cont_choice.lower() == "y":
