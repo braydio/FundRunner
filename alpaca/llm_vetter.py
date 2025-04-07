@@ -28,7 +28,7 @@ class LLMVetter:
             bool: True if the trade is approved by the LLM, otherwise False.
         """
         if prompt is None:
-            prompt = f"Review the following trade logic details and state whether this is a sound trade: {trade_details}"
+            prompt = f"Review the following trade statistics. What stands out about this trade? What is another statistic that should be measured in evaluating the trade? Details: {trade_details}"
         try:
             response = ask_gpt(prompt)
             if response:
