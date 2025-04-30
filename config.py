@@ -36,7 +36,7 @@ SIMULATION_MODE = os.getenv("SIMULATION_MODE", "False").lower() == "true"
 SIMULATED_STARTING_CASH = float(os.getenv("SIMULATED_STARTING_CASH", "5000"))
 
 # GPT model configuration (centralized so all modules use the same model)
-GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4")
+GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4o-mini")
 
 # Tradier API key for live options data
 TRADIER_API_KEY = os.getenv("TRADIER_API_KEY", "your_tradier_api_key_here")
