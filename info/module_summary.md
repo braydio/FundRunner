@@ -1,1 +1,29 @@
-# This file temporarily blank
+# Module Function Summary
+
+- **api_client.py**
+  - Number of functions: `13`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/api_client.py)
+- **backtester.py**
+  - Number of functions: `1`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/backtester.py)
+- **chatgpt_advisor.py**
+  - Number of functions: `7`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/chatgpt_advisor.py)
+- **cli.py**
+  - Number of functions: `12`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/cli.py)
+- **config.py**
+  - Number of functions: `0`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/config.py)
+- **gpt_api.py**
+  - Number of functions: `6`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/gpt_api.py)
+- **live_options_api.py**
+  - Number of functions: `1`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/live_options_api.py)
+- **llm_integration.py**
+  - Number of functions: `8`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/llm_integration.py)
+- **logger_config.py**
+  - Number of functions: `1`
+  - [View module](https://github.com/braydio/FundRunner/blob/main/logger_config.py)
