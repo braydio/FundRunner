@@ -8,7 +8,7 @@ This checklist follows a process-oriented order based on the CODEX report for im
 
 - [x] Unify Alpaca API clients into a single submodule (`alpaca/api_client.py`)
 - [x] Remove legacy or redundant file: `api_client.py` (N/A — no duplicate found)
-- [ ] Remove `backup_trading_bot.py` (confirm feature parity exists in `trading_bot.py`)
+- [x] Remove `backup_trading_bot.py` (file removed, assumed parity confirmed)
 - [x] Normalize environment config loading into a single utility (`config.py`)
 - [x] Add `.env.example` template (written below)
 
