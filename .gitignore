@@ -1,6 +1,8 @@
 .venv
 .env
 __pycache__/*
+alpaca/__pycache__/*
+plugins/__pycache__/*
 dev/*
 *.dev
 *.log
