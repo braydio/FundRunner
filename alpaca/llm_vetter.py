@@ -1,7 +1,7 @@
 
 # llm_vetter.py
 import logging
-from gpt_api import ask_gpt
+from gpt_client import ask_gpt
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
