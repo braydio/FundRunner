@@ -1,5 +1,5 @@
 # watchlist_manager.py
-from api_client import AlpacaClient
+from alpaca.api_client import AlpacaClient
 
 class WatchlistManager:
     def __init__(self):
