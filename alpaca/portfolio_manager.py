@@ -1,6 +1,6 @@
 
 # portfolio_manager.py
-from api_client import AlpacaClient
+from alpaca.api_client import AlpacaClient
 
 class PortfolioManager:
     def __init__(self):
