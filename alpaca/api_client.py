@@ -186,3 +186,40 @@ class AlpacaClient:
             logger.error("Error deleting watchlist %s: %s", watchlist_id, e, exc_info=True)
             raise
 
+    def get_historical_bars(self, symbol, days=30, timeframe=tradeapi.rest.TimeFrame.Day):
+        """Return historical bars for the given symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            The ticker to query.
+        days : int, optional
+            Number of days of data to retrieve, by default 30.
+        timeframe : TimeFrame, optional
+            Bar timeframe, by default ``TimeFrame.Day``.
+
+        Returns
+        -------
+        pandas.DataFrame | None
+            DataFrame of bar data indexed by time or ``None`` if retrieval fails.
+        """
+        from datetime import datetime, timedelta
+
+        end = datetime.utcnow()
+        start = end - timedelta(days=days)
+        try:
+            bars = self.api.get_bars(symbol, timeframe, start.isoformat(), end.isoformat())
+            return bars.df if hasattr(bars, "df") else None
+        except Exception as e:
+            logger.error("Error fetching historical bars for %s: %s", symbol, e, exc_info=True)
+            return None
+
+    def get_latest_price(self, symbol):
+        """Return the latest trade price for ``symbol`` or ``None`` if unavailable."""
+        try:
+            bar = self.api.get_latest_bar(symbol)
+            return float(getattr(bar, "c", None)) if bar is not None else None
+        except Exception as e:
+            logger.error("Error fetching latest price for %s: %s", symbol, e, exc_info=True)
+            return None
+
