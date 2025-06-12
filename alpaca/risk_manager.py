@@ -1,18 +1,31 @@
 
 # risk_manager.py
-import yfinance as yf
+"""Utilities for adjusting risk parameters based on recent market data."""
+
+from datetime import datetime, timedelta
+
+from alpaca.api_client import AlpacaClient
 
 class RiskManager:
-    def __init__(self, base_allocation_limit=0.05, base_risk_threshold=0.6, minimum_allocation=0.01):
-        """
+    def __init__(
+        self,
+        base_allocation_limit: float = 0.05,
+        base_risk_threshold: float = 0.6,
+        minimum_allocation: float = 0.01,
+        client: AlpacaClient | None = None,
+    ) -> None:
+        """Initialize risk parameters and API client.
+
         Args:
-            base_allocation_limit (float): Default fraction of buying power to allocate per trade.
-            base_risk_threshold (float): Default minimum simulated probability of profit required.
-            minimum_allocation (float): Minimum allocation floor.
+            base_allocation_limit: Default fraction of buying power to allocate per trade.
+            base_risk_threshold: Default minimum simulated probability of profit required.
+            minimum_allocation: Minimum allocation floor.
+            client: Optional ``AlpacaClient`` used to fetch historical bars.
         """
         self.base_allocation_limit = base_allocation_limit
         self.base_risk_threshold = base_risk_threshold
         self.minimum_allocation = minimum_allocation
+        self.client = client or AlpacaClient()
 
     def adjust_parameters(self, symbol):
         """
@@ -23,12 +36,14 @@ class RiskManager:
             (tuple): (adjusted_allocation_limit, adjusted_risk_threshold)
         """
         try:
-            data = yf.download(symbol, period="1mo", interval="1d")
+            end = datetime.utcnow().isoformat()
+            start = (datetime.utcnow() - timedelta(days=30)).isoformat()
+            data = self.client.get_bars(symbol, start=start, end=end)
             if data.empty:
                 return self.base_allocation_limit, self.base_risk_threshold
 
             # Compute volatility as the standard deviation of daily returns.
-            data['Return'] = data['Close'].pct_change()
+            data["Return"] = data["close"].pct_change()
             volatility = data['Return'].std()
 
             if volatility > 0:
@@ -43,7 +58,7 @@ class RiskManager:
             adjusted_allocation = max(adjusted_allocation, self.minimum_allocation)
 
             # Incorporate volume: if average volume is low, reduce allocation further.
-            avg_volume = data['Volume'].mean()
+            avg_volume = data['volume'].mean()
             if avg_volume < 1e6:
                 adjusted_allocation *= 0.8  # reduce allocation by 20%
 
