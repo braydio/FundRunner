@@ -1,8 +1,10 @@
-
 # api_client.py
+"""Wrapper around :mod:`alpaca_trade_api` providing convenience helpers."""
+
 import alpaca_trade_api as tradeapi
 from config import API_KEY, API_SECRET, BASE_URL
 import logging
+import requests
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
@@ -13,12 +15,13 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.WARNING)
 
 # Create a formatter and attach it to the handler
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 ch.setFormatter(formatter)
 
 # Add the handler to the logger if it's not already added
 if not logger.hasHandlers():
     logger.addHandler(ch)
+
 
 class AlpacaClient:
     def __init__(self):
@@ -56,15 +59,21 @@ class AlpacaClient:
             raise
 
     def submit_order(self, symbol, qty, side, order_type, time_in_force):
-        logger.debug("Submitting order: side=%s, qty=%s, symbol=%s, order_type=%s, time_in_force=%s",
-                     side, qty, symbol, order_type, time_in_force)
+        logger.debug(
+            "Submitting order: side=%s, qty=%s, symbol=%s, order_type=%s, time_in_force=%s",
+            side,
+            qty,
+            symbol,
+            order_type,
+            time_in_force,
+        )
         try:
             order = self.api.submit_order(
                 symbol=symbol,
                 qty=qty,
                 side=side,
                 type=order_type,
-                time_in_force=time_in_force
+                time_in_force=time_in_force,
             )
             logger.debug("Order submitted successfully: %s", order)
             return order
@@ -78,18 +87,23 @@ class AlpacaClient:
             positions = self.api.list_positions()
             sanitized_positions = []
             for pos in positions:
-                sanitized_positions.append({
-                    "symbol": pos.symbol,
-                    "qty": self.safe_float(pos.qty),
-                    "market_value": self.safe_float(pos.market_value),
-                    "unrealized_pl_percent": self.safe_float(getattr(pos, 'unrealized_plpc', 0)) * 100
-                })
+                sanitized_positions.append(
+                    {
+                        "symbol": pos.symbol,
+                        "qty": self.safe_float(pos.qty),
+                        "market_value": self.safe_float(pos.market_value),
+                        "unrealized_pl_percent": self.safe_float(
+                            getattr(pos, "unrealized_plpc", 0)
+                        )
+                        * 100,
+                    }
+                )
             logger.debug("Sanitized positions: %s", sanitized_positions)
             return sanitized_positions
         except Exception as e:
             logger.error("Error listing positions: %s", e, exc_info=True)
             raise
-  
+
     def get_position(self, symbol):
         logger.debug("Getting position for symbol: %s", symbol)
         try:
@@ -98,12 +112,17 @@ class AlpacaClient:
                 "symbol": position.symbol,
                 "qty": self.safe_float(position.qty),
                 "market_value": self.safe_float(position.market_value),
-                "unrealized_pl_percent": self.safe_float(getattr(position, 'unrealized_plpc', 0)) * 100
+                "unrealized_pl_percent": self.safe_float(
+                    getattr(position, "unrealized_plpc", 0)
+                )
+                * 100,
             }
             logger.debug("Sanitized position: %s", sanitized_position)
             return sanitized_position
         except Exception as e:
-            logger.error("Error getting position for symbol %s: %s", symbol, e, exc_info=True)
+            logger.error(
+                "Error getting position for symbol %s: %s", symbol, e, exc_info=True
+            )
             return None
 
     def cancel_order(self, order_id):
@@ -116,7 +135,7 @@ class AlpacaClient:
             logger.error("Error canceling order %s: %s", order_id, e, exc_info=True)
             raise
 
-    def list_orders(self, status='open'):
+    def list_orders(self, status="open"):
         logger.debug("Listing orders with status: %s", status)
         try:
             orders = self.api.list_orders(status=status)
@@ -149,7 +168,9 @@ class AlpacaClient:
     def add_to_watchlist(self, watchlist_identifier, symbol):
         if not str(watchlist_identifier).isdigit():
             watchlists = self.api.list_watchlists()
-            matching = [w for w in watchlists if w.name.lower() == watchlist_identifier.lower()]
+            matching = [
+                w for w in watchlists if w.name.lower() == watchlist_identifier.lower()
+            ]
             if matching:
                 watchlist_id = matching[0].id
             else:
@@ -164,10 +185,18 @@ class AlpacaClient:
         logger.debug("Removing symbol %s from watchlist %s", symbol, watchlist_id)
         try:
             result = self.api.remove_from_watchlist(watchlist_id, symbol)
-            logger.debug("Symbol %s removed from watchlist %s: %s", symbol, watchlist_id, result)
+            logger.debug(
+                "Symbol %s removed from watchlist %s: %s", symbol, watchlist_id, result
+            )
             return result
         except Exception as e:
-            logger.error("Error removing symbol %s from watchlist %s: %s", symbol, watchlist_id, e, exc_info=True)
+            logger.error(
+                "Error removing symbol %s from watchlist %s: %s",
+                symbol,
+                watchlist_id,
+                e,
+                exc_info=True,
+            )
             raise
 
     def get_watchlist(self, watchlist_id):
@@ -177,7 +206,9 @@ class AlpacaClient:
             logger.debug("Watchlist retrieved: %s", wl)
             return wl
         except Exception as e:
-            logger.error("Error fetching watchlist %s: %s", watchlist_id, e, exc_info=True)
+            logger.error(
+                "Error fetching watchlist %s: %s", watchlist_id, e, exc_info=True
+            )
             raise
 
     def delete_watchlist(self, watchlist_id):
@@ -187,16 +218,65 @@ class AlpacaClient:
             logger.debug("Watchlist deleted: %s", result)
             return result
         except Exception as e:
-            logger.error("Error deleting watchlist %s: %s", watchlist_id, e, exc_info=True)
+            logger.error(
+                "Error deleting watchlist %s: %s", watchlist_id, e, exc_info=True
+            )
             raise
 
-    def get_bars(self, symbol, start, end):
-        """Retrieve daily bar data as a pandas DataFrame."""
+    def get_bars(self, symbol, start, end, timeframe="1Day"):
+        """Return historical bars as a list of dictionaries."""
         logger.debug("Fetching bars for %s from %s to %s", symbol, start, end)
         try:
-            bars = self.api.get_bars(symbol, tradeapi.TimeFrame.Day, start=start, end=end)
-            return bars.df
+            bars = self.api.get_bars(symbol, timeframe, start=start, end=end)
+            result = []
+            for bar in bars:
+                result.append(
+                    {
+                        "timestamp": str(bar.t),
+                        "open": self.safe_float(bar.o),
+                        "high": self.safe_float(bar.h),
+                        "low": self.safe_float(bar.l),
+                        "close": self.safe_float(bar.c),
+                        "volume": self.safe_float(bar.v, 0),
+                    }
+                )
+            return result
         except Exception as e:
-            logger.error("Error fetching bars for %s: %s", symbol, e, exc_info=True)
-            raise
+            logger.error("Error fetching bars: %s", e, exc_info=True)
+            return {"error": str(e)}
 
+    def get_latest_quote(self, symbol):
+        """Return the most recent quote for *symbol* as a dictionary."""
+        logger.debug("Fetching latest quote for %s", symbol)
+        try:
+            quote = self.api.get_latest_quote(symbol)
+            return {
+                "ask_price": self.safe_float(getattr(quote, "ask_price", None)),
+                "bid_price": self.safe_float(getattr(quote, "bid_price", None)),
+                "ask_size": self.safe_float(getattr(quote, "ask_size", None), 0),
+                "bid_size": self.safe_float(getattr(quote, "bid_size", None), 0),
+                "timestamp": str(getattr(quote, "timestamp", "")),
+            }
+        except Exception as e:
+            logger.error(
+                "Error fetching latest quote for %s: %s", symbol, e, exc_info=True
+            )
+            return {"error": str(e)}
+
+    def get_options_chain(self, symbol, expiration):
+        """Fetch available option contracts for *symbol* with given expiration."""
+        logger.debug("Fetching options chain for %s expiring %s", symbol, expiration)
+        url = f"{BASE_URL}/v2/options/contracts"
+        headers = {
+            "APCA-API-KEY-ID": API_KEY,
+            "APCA-API-SECRET-KEY": API_SECRET,
+            "Accept": "application/json",
+        }
+        params = {"symbol": symbol, "expiration_date": expiration}
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logger.error("Error fetching options chain: %s", e, exc_info=True)
+            return {"error": str(e)}
