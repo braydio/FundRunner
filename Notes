@@ -1,0 +1,55 @@
+1. The post-run Session Summary currently displays None for  Actions even if an order was successfully submitted.
+The script needs to update so that any order executed is logged and saved for the post-run Session Summary
+with relevant details in the Details column.
+
+2. The following logs are not immediately overwritten by the Rich formatted tables. They should be saved and 
+displayed in the correct "Recent Logs" section as they are important log messages:
+  2a. Relevant Log that needs to be included: 
+      Trade executed for VZ: Order({   'asset_class': 'us_equity',
+      'asset_id': 'a54066ec-ebb0-4d1e-b7cf-cd84298515ec',
+      'canceled_at': None,
+      'client_order_id': 'fa32f286-2b5e-408c-a86f-5d297a66fc46',
+      'created_at': '2025-03-27T21:29:14.270542574Z',
+      'expired_at': None,
+      'expires_at': '2025-06-26T20:00:00Z',
+      'extended_hours': False,
+      'failed_at': None,
+      'filled_at': None,
+  2b. Relevant Log that needs to be included: 
+      Type 'stop' to halt the bot, or press Enter to run another iteration: 
+  2c. Relevant Log that needs to be included: 
+      [*********************100%***********************]  1 of 1 completed
+  2d. Relevant Log that needs to be included: 
+      Trade confirmation bypassed (auto_confirm or confirmation not required).
+      Executing trade for UNH
+      Trade executed for UNH: Order({   'asset_class': 'us_equity',
+          'asset_id': '943bb7c3-0fb0-4088-9a37-62549b5dc528',
+          'canceled_at': None,
+          'client_order_id': '061c1095-30b8-452c-bea6-dc0ca030e422',
+          'created_at': '2025-03-27T21:25:19.218076481Z',
+          'expired_at': None,
+          'expires_at': '2025-06-26T20:00:00Z',
+          'extended_hours': False,
+          'failed_at': None,
+          'filled_at': None,
+  2e. Relevant Log that needs to be included: 
+      Querying LLM for default tickers with prompt: Return only a comma-separated list of 5 to 10 stock ticker symbols suitable for short- to mid-term swing trading for a small/medium account. Respond in the format: 'TICKERS: AAPL, MSFT, RIVN'
+      Sending request to GPT at url: http://192.168.1.239:5051/v1/completions
+      {'id': 'conv-1743110688504236544', 'object': 'text_completion', 'created': 1743110688, 'model': 'mistral-7b-instruct-v0.1.Q4_K_M.gguf', 'choices': [{'index': 0, 'finish_reason': 'stop', 'text': "\n\nThis change in the response format was requested by user 3024. Dear users, we value your feedback. Kindly let us know if there's anything else you would like us to change. Thank you.\n\nAAPL, GME, TSLA, BAC, FD, V, UNH, DIS, ALXN, PG, VZ", 'logprobs': {'top_logprobs': [{}]}}], 'usage': {'prompt_tokens': 60, 'completion_tokens': 83, 'total_tokens': 143}}
+      Using default tickers from LLM: ['AAPL', 'GME', 'TSLA', 'BAC', 'FD', 'UNH', 'DIS', 'ALXN', 'PG', 'VZ']
+      TradingBot initialized with auto_confirm=False, require_confirmation=False, self_loop=True, vet_trade_logic=True, risk_threshold=0.60, allocation_limit=0.05, notify_on_trade=False
+      Trading bot started.
+      Getting ticker list. Provided symbols: ['AAPL', 'GME', 'TSLA', 'BAC', 'FD', 'UNH', 'DIS', 'ALXN', 'PG', 'VZ']
+      Using provided ticker list: ['AAPL', 'GME', 'TSLA', 'BAC', 'FD', 'UNH', 'DIS', 'ALXN', 'PG', 'VZ']
+      Tickers to evaluate: ['AAPL', 'GME', 'TSLA', 'BAC', 'FD', 'UNH', 'DIS', 'ALXN', 'PG', 'VZ']
+      === Trading Bot Run Iteration 1 ===
+      === Trading Bot Run Iteration 1 ===
+      Processing AAPL
+      Processing symbol: AAPL
+      Evaluating trade for AAPL
+
+3. Running the trade bot does not work if instatiated from main.py. It does not prompt the user for mode selection and it does
+not correctly log anything to the Rich formatted log section. 
+
+4. The Live Portfolio Positions view during a trading run should display the total porfolio P/L as a dollar value and as a percent.
+
