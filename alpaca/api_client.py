@@ -1,6 +1,7 @@
 
 # api_client.py
 import alpaca_trade_api as tradeapi
+from alpaca_trade_api.rest import TimeFrame
 from config import API_KEY, API_SECRET, BASE_URL
 import logging
 
@@ -185,4 +186,35 @@ class AlpacaClient:
         except Exception as e:
             logger.error("Error deleting watchlist %s: %s", watchlist_id, e, exc_info=True)
             raise
+
+    def get_bars(self, symbol, start_date, end_date):
+        """Retrieve daily bars for a given symbol."""
+        logger.debug(
+            "Fetching bars for %s from %s to %s", symbol, start_date, end_date
+        )
+        try:
+            bars = self.api.get_bars(
+                symbol,
+                TimeFrame.Day,
+                start=start_date,
+                end=end_date,
+            ).df
+            if bars.empty:
+                logger.debug("No bars returned for %s", symbol)
+                return []
+            bars.reset_index(inplace=True)
+            return [
+                {"t": row["timestamp"], "o": row["open"], "c": row["close"]}
+                for _, row in bars.iterrows()
+            ]
+        except Exception as e:
+            logger.error(
+                "Error fetching bars for %s between %s and %s: %s",
+                symbol,
+                start_date,
+                end_date,
+                e,
+                exc_info=True,
+            )
+            return []
 
