@@ -38,7 +38,6 @@ hypothesis==6.135.7
 importlib_resources==6.5.2
 ipython==9.3.0
 ipywidgets==8.1.7
-jnius==1.1.0
 keyring==25.6.0
 lxml==5.4.0
 mariadb==1.1.12
