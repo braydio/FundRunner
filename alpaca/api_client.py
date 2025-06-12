@@ -22,8 +22,12 @@ if not logger.hasHandlers():
 
 class AlpacaClient:
     def __init__(self):
-        logger.debug("Initializing AlpacaClient with BASE_URL: %s and API_KEY: %s", BASE_URL, API_KEY)
-        self.api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL, api_version='v2')
+        logger.debug(
+            "Initializing AlpacaClient with BASE_URL: %s and API_KEY: %s",
+            BASE_URL,
+            API_KEY,
+        )
+        self.api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL, api_version="v2")
 
     def safe_float(self, val, default=0.0):
         try:
@@ -184,5 +188,15 @@ class AlpacaClient:
             return result
         except Exception as e:
             logger.error("Error deleting watchlist %s: %s", watchlist_id, e, exc_info=True)
+            raise
+
+    def get_bars(self, symbol, start, end):
+        """Retrieve daily bar data as a pandas DataFrame."""
+        logger.debug("Fetching bars for %s from %s to %s", symbol, start, end)
+        try:
+            bars = self.api.get_bars(symbol, tradeapi.TimeFrame.Day, start=start, end=end)
+            return bars.df
+        except Exception as e:
+            logger.error("Error fetching bars for %s: %s", symbol, e, exc_info=True)
             raise
 
