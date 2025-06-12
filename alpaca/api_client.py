@@ -2,6 +2,7 @@
 """Wrapper around :mod:`alpaca_trade_api` providing convenience helpers."""
 
 import alpaca_trade_api as tradeapi
+from alpaca_trade_api.rest import TimeFrame
 from config import API_KEY, API_SECRET, BASE_URL
 import logging
 import requests
