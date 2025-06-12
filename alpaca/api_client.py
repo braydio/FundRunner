@@ -223,60 +223,40 @@ class AlpacaClient:
             )
             raise
 
-    def get_bars(self, symbol, start, end, timeframe="1Day"):
-        """Return historical bars as a list of dictionaries."""
-        logger.debug("Fetching bars for %s from %s to %s", symbol, start, end)
-        try:
-            bars = self.api.get_bars(symbol, timeframe, start=start, end=end)
-            result = []
-            for bar in bars:
-                result.append(
-                    {
-                        "timestamp": str(bar.t),
-                        "open": self.safe_float(bar.o),
-                        "high": self.safe_float(bar.h),
-                        "low": self.safe_float(bar.l),
-                        "close": self.safe_float(bar.c),
-                        "volume": self.safe_float(bar.v, 0),
-                    }
-                )
-            return result
-        except Exception as e:
-            logger.error("Error fetching bars: %s", e, exc_info=True)
-            return {"error": str(e)}
+    def get_historical_bars(self, symbol, days=30, timeframe=tradeapi.rest.TimeFrame.Day):
+        """Return historical bars for the given symbol.
 
-    def get_latest_quote(self, symbol):
-        """Return the most recent quote for *symbol* as a dictionary."""
-        logger.debug("Fetching latest quote for %s", symbol)
-        try:
-            quote = self.api.get_latest_quote(symbol)
-            return {
-                "ask_price": self.safe_float(getattr(quote, "ask_price", None)),
-                "bid_price": self.safe_float(getattr(quote, "bid_price", None)),
-                "ask_size": self.safe_float(getattr(quote, "ask_size", None), 0),
-                "bid_size": self.safe_float(getattr(quote, "bid_size", None), 0),
-                "timestamp": str(getattr(quote, "timestamp", "")),
-            }
-        except Exception as e:
-            logger.error(
-                "Error fetching latest quote for %s: %s", symbol, e, exc_info=True
-            )
-            return {"error": str(e)}
+        Parameters
+        ----------
+        symbol : str
+            The ticker to query.
+        days : int, optional
+            Number of days of data to retrieve, by default 30.
+        timeframe : TimeFrame, optional
+            Bar timeframe, by default ``TimeFrame.Day``.
 
-    def get_options_chain(self, symbol, expiration):
-        """Fetch available option contracts for *symbol* with given expiration."""
-        logger.debug("Fetching options chain for %s expiring %s", symbol, expiration)
-        url = f"{BASE_URL}/v2/options/contracts"
-        headers = {
-            "APCA-API-KEY-ID": API_KEY,
-            "APCA-API-SECRET-KEY": API_SECRET,
-            "Accept": "application/json",
-        }
-        params = {"symbol": symbol, "expiration_date": expiration}
+        Returns
+        -------
+        pandas.DataFrame | None
+            DataFrame of bar data indexed by time or ``None`` if retrieval fails.
+        """
+        from datetime import datetime, timedelta
+
+        end = datetime.utcnow()
+        start = end - timedelta(days=days)
         try:
-            resp = requests.get(url, headers=headers, params=params, timeout=10)
-            resp.raise_for_status()
-            return resp.json()
+            bars = self.api.get_bars(symbol, timeframe, start.isoformat(), end.isoformat())
+            return bars.df if hasattr(bars, "df") else None
         except Exception as e:
-            logger.error("Error fetching options chain: %s", e, exc_info=True)
-            return {"error": str(e)}
+            logger.error("Error fetching historical bars for %s: %s", symbol, e, exc_info=True)
+            return None
+
+    def get_latest_price(self, symbol):
+        """Return the latest trade price for ``symbol`` or ``None`` if unavailable."""
+        try:
+            bar = self.api.get_latest_bar(symbol)
+            return float(getattr(bar, "c", None)) if bar is not None else None
+        except Exception as e:
+            logger.error("Error fetching latest price for %s: %s", symbol, e, exc_info=True)
+            return None
+

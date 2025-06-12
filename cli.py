@@ -1,10 +1,10 @@
 # cli.py
 import sys
 import asyncio
-from trade_manager import TradeManager
-from portfolio_manager import PortfolioManager
-from watchlist_manager import WatchlistManager
-from trading_bot import TradingBot
+from alpaca.trade_manager import TradeManager
+from alpaca.portfolio_manager import PortfolioManager
+from alpaca.watchlist_manager import WatchlistManager
+from alpaca.trading_bot import TradingBot
 
 class CLI:
     def __init__(self):
