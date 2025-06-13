@@ -1,6 +1,8 @@
 # backtester.py
-import yfinance as yf
+"""Simple historical backtesting utilities."""
+
 import logging
+from alpaca.api_client import AlpacaClient
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -22,8 +24,9 @@ def run_backtest(symbol, start_date, end_date, initial_capital=100000, allocatio
     Returns:
         dict: Performance metrics including final capital, total return, and trade details.
     """
-    data = yf.download(symbol, start=start_date, end=end_date)
-    if data.empty:
+    client = AlpacaClient()
+    data = client.get_bars(symbol, start_date, end_date)
+    if not data:
         logger.error("No data found for symbol %s", symbol)
         return None
 
@@ -31,9 +34,9 @@ def run_backtest(symbol, start_date, end_date, initial_capital=100000, allocatio
     trades = []
     threshold = 0.01  # Example: 1% intraday move triggers a trade
 
-    for idx, row in data.iterrows():
-        open_price = row['Open']
-        close_price = row['Close']
+    for bar in data:
+        open_price = bar['o']
+        close_price = bar['c']
         daily_return = (close_price - open_price) / open_price
 
         if daily_return > threshold:
@@ -43,7 +46,7 @@ def run_backtest(symbol, start_date, end_date, initial_capital=100000, allocatio
             trade_profit = qty * (close_price - open_price)
             capital += trade_profit
             trades.append({
-                'date': idx,
+                'date': bar['t'],
                 'open': open_price,
                 'close': close_price,
                 'qty': qty,

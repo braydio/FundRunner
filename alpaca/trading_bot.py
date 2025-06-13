@@ -1,11 +1,14 @@
 
-"""Trading bot orchestration for Alpaca API interactions."""
+"""Interactive trading bot using Alpaca for market data and order routing.
 
+This module defines :class:`TradingBot`, a Rich-powered interface that evaluates
+trades using live Alpaca data and optional LLM vetting. It coordinates account
+info retrieval, position monitoring and order execution.
+"""
 import asyncio
 import logging
 import math
 import sys
-import yfinance as yf
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -253,14 +256,15 @@ class TradingBot:
             return None
         # Compute equity trade metrics using historical data
         try:
-            hist = yf.download(symbol, period="1mo", interval="1d", auto_adjust=False)
-            if hist.empty:
+            hist = self.client.get_historical_bars(symbol, days=30)
+            if hist is None or hist.empty:
                 self.logger.warning("No historical data for %s", symbol)
                 probability_of_profit = 0.55
                 expected_net_value = 0.02
                 es_metric = None
             else:
-                returns = hist['Close'].pct_change().dropna()
+                close_col = 'close' if 'close' in hist.columns else 'Close'
+                returns = hist[close_col].pct_change().dropna()
                 mean_return = returns.mean().item() if hasattr(returns.mean(), 'item') else float(returns.mean())
                 volatility = returns.std().item() if hasattr(returns.std(), 'item') else float(returns.std())
                 if volatility > 0:
@@ -282,8 +286,9 @@ class TradingBot:
             self.logger.info("Trade for %s rejected: probability=%.2f, expected_net=%.4f", symbol, probability_of_profit, expected_net_value)
             return None
         try:
-            ticker_data = yf.Ticker(symbol)
-            current_price = ticker_data.info['regularMarketPrice']
+            current_price = self.client.get_latest_price(symbol)
+            if current_price is None:
+                raise ValueError("Price not available")
         except Exception as e:
             self.logger.error("Error fetching price for %s: %s", symbol, e)
             return None

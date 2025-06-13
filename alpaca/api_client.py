@@ -1,8 +1,11 @@
-
 # api_client.py
+"""Wrapper around :mod:`alpaca_trade_api` providing convenience helpers."""
+
 import alpaca_trade_api as tradeapi
+from alpaca_trade_api.rest import TimeFrame
 from config import API_KEY, API_SECRET, BASE_URL
 import logging
+import requests
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
@@ -13,17 +16,22 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.WARNING)
 
 # Create a formatter and attach it to the handler
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 ch.setFormatter(formatter)
 
 # Add the handler to the logger if it's not already added
 if not logger.hasHandlers():
     logger.addHandler(ch)
 
+
 class AlpacaClient:
     def __init__(self):
-        logger.debug("Initializing AlpacaClient with BASE_URL: %s and API_KEY: %s", BASE_URL, API_KEY)
-        self.api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL, api_version='v2')
+        logger.debug(
+            "Initializing AlpacaClient with BASE_URL: %s and API_KEY: %s",
+            BASE_URL,
+            API_KEY,
+        )
+        self.api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL, api_version="v2")
 
     def safe_float(self, val, default=0.0):
         try:
@@ -52,15 +60,21 @@ class AlpacaClient:
             raise
 
     def submit_order(self, symbol, qty, side, order_type, time_in_force):
-        logger.debug("Submitting order: side=%s, qty=%s, symbol=%s, order_type=%s, time_in_force=%s",
-                     side, qty, symbol, order_type, time_in_force)
+        logger.debug(
+            "Submitting order: side=%s, qty=%s, symbol=%s, order_type=%s, time_in_force=%s",
+            side,
+            qty,
+            symbol,
+            order_type,
+            time_in_force,
+        )
         try:
             order = self.api.submit_order(
                 symbol=symbol,
                 qty=qty,
                 side=side,
                 type=order_type,
-                time_in_force=time_in_force
+                time_in_force=time_in_force,
             )
             logger.debug("Order submitted successfully: %s", order)
             return order
@@ -74,18 +88,23 @@ class AlpacaClient:
             positions = self.api.list_positions()
             sanitized_positions = []
             for pos in positions:
-                sanitized_positions.append({
-                    "symbol": pos.symbol,
-                    "qty": self.safe_float(pos.qty),
-                    "market_value": self.safe_float(pos.market_value),
-                    "unrealized_pl_percent": self.safe_float(getattr(pos, 'unrealized_plpc', 0)) * 100
-                })
+                sanitized_positions.append(
+                    {
+                        "symbol": pos.symbol,
+                        "qty": self.safe_float(pos.qty),
+                        "market_value": self.safe_float(pos.market_value),
+                        "unrealized_pl_percent": self.safe_float(
+                            getattr(pos, "unrealized_plpc", 0)
+                        )
+                        * 100,
+                    }
+                )
             logger.debug("Sanitized positions: %s", sanitized_positions)
             return sanitized_positions
         except Exception as e:
             logger.error("Error listing positions: %s", e, exc_info=True)
             raise
-  
+
     def get_position(self, symbol):
         logger.debug("Getting position for symbol: %s", symbol)
         try:
@@ -94,12 +113,17 @@ class AlpacaClient:
                 "symbol": position.symbol,
                 "qty": self.safe_float(position.qty),
                 "market_value": self.safe_float(position.market_value),
-                "unrealized_pl_percent": self.safe_float(getattr(position, 'unrealized_plpc', 0)) * 100
+                "unrealized_pl_percent": self.safe_float(
+                    getattr(position, "unrealized_plpc", 0)
+                )
+                * 100,
             }
             logger.debug("Sanitized position: %s", sanitized_position)
             return sanitized_position
         except Exception as e:
-            logger.error("Error getting position for symbol %s: %s", symbol, e, exc_info=True)
+            logger.error(
+                "Error getting position for symbol %s: %s", symbol, e, exc_info=True
+            )
             return None
 
     def cancel_order(self, order_id):
@@ -112,7 +136,7 @@ class AlpacaClient:
             logger.error("Error canceling order %s: %s", order_id, e, exc_info=True)
             raise
 
-    def list_orders(self, status='open'):
+    def list_orders(self, status="open"):
         logger.debug("Listing orders with status: %s", status)
         try:
             orders = self.api.list_orders(status=status)
@@ -145,7 +169,9 @@ class AlpacaClient:
     def add_to_watchlist(self, watchlist_identifier, symbol):
         if not str(watchlist_identifier).isdigit():
             watchlists = self.api.list_watchlists()
-            matching = [w for w in watchlists if w.name.lower() == watchlist_identifier.lower()]
+            matching = [
+                w for w in watchlists if w.name.lower() == watchlist_identifier.lower()
+            ]
             if matching:
                 watchlist_id = matching[0].id
             else:
@@ -160,10 +186,18 @@ class AlpacaClient:
         logger.debug("Removing symbol %s from watchlist %s", symbol, watchlist_id)
         try:
             result = self.api.remove_from_watchlist(watchlist_id, symbol)
-            logger.debug("Symbol %s removed from watchlist %s: %s", symbol, watchlist_id, result)
+            logger.debug(
+                "Symbol %s removed from watchlist %s: %s", symbol, watchlist_id, result
+            )
             return result
         except Exception as e:
-            logger.error("Error removing symbol %s from watchlist %s: %s", symbol, watchlist_id, e, exc_info=True)
+            logger.error(
+                "Error removing symbol %s from watchlist %s: %s",
+                symbol,
+                watchlist_id,
+                e,
+                exc_info=True,
+            )
             raise
 
     def get_watchlist(self, watchlist_id):
@@ -173,7 +207,9 @@ class AlpacaClient:
             logger.debug("Watchlist retrieved: %s", wl)
             return wl
         except Exception as e:
-            logger.error("Error fetching watchlist %s: %s", watchlist_id, e, exc_info=True)
+            logger.error(
+                "Error fetching watchlist %s: %s", watchlist_id, e, exc_info=True
+            )
             raise
 
     def delete_watchlist(self, watchlist_id):
@@ -183,6 +219,45 @@ class AlpacaClient:
             logger.debug("Watchlist deleted: %s", result)
             return result
         except Exception as e:
-            logger.error("Error deleting watchlist %s: %s", watchlist_id, e, exc_info=True)
+            logger.error(
+                "Error deleting watchlist %s: %s", watchlist_id, e, exc_info=True
+            )
             raise
+
+    def get_historical_bars(self, symbol, days=30, timeframe=tradeapi.rest.TimeFrame.Day):
+        """Return historical bars for the given symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            The ticker to query.
+        days : int, optional
+            Number of days of data to retrieve, by default 30.
+        timeframe : TimeFrame, optional
+            Bar timeframe, by default ``TimeFrame.Day``.
+
+        Returns
+        -------
+        pandas.DataFrame | None
+            DataFrame of bar data indexed by time or ``None`` if retrieval fails.
+        """
+        from datetime import datetime, timedelta
+
+        end = datetime.utcnow()
+        start = end - timedelta(days=days)
+        try:
+            bars = self.api.get_bars(symbol, timeframe, start.isoformat(), end.isoformat())
+            return bars.df if hasattr(bars, "df") else None
+        except Exception as e:
+            logger.error("Error fetching historical bars for %s: %s", symbol, e, exc_info=True)
+            return None
+
+    def get_latest_price(self, symbol):
+        """Return the latest trade price for ``symbol`` or ``None`` if unavailable."""
+        try:
+            bar = self.api.get_latest_bar(symbol)
+            return float(getattr(bar, "c", None)) if bar is not None else None
+        except Exception as e:
+            logger.error("Error fetching latest price for %s: %s", symbol, e, exc_info=True)
+            return None
 
