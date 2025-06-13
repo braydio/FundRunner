@@ -168,10 +168,16 @@ class CLI:
             print(f"Error retrieving trading advice: {e}")
 
     def run_trading_bot(self):
+        """Prompt for symbols and launch :class:`TradingBot`."""
         symbols = input("Enter symbols (comma separated) for the trading bot (or press Enter to use default): ").upper().split(',')
         symbols = [s.strip() for s in symbols if s.strip()]
         try:
-            bot = TradingBot(auto_confirm=False, vet_trade_logic=True, vetter_vendor="local")
+            bot = TradingBot(
+                auto_confirm=False,
+                vet_trade_logic=True,
+                vetter_vendor="local",
+                micro_mode=MICRO_MODE,
+            )
             asyncio.run(bot.run(symbols if symbols else None))
         except Exception as e:
             print(f"Error running trading bot: {e}")

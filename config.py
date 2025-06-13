@@ -35,6 +35,14 @@ NOTIFICATION_EMAIL = os.getenv("NOTIFICATION_EMAIL", "recipient@example.com")
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "False").lower() == "true"
 SIMULATED_STARTING_CASH = float(os.getenv("SIMULATED_STARTING_CASH", "5000"))
 
+# Micro account configuration
+MICRO_MODE = os.getenv("MICRO_MODE", "false").lower() == "true"
+MICRO_ACCOUNT_SIZE = float(os.getenv("MICRO_ACCOUNT_SIZE", "100"))
+
+if MICRO_MODE:
+    # Override starting cash when running in micro mode
+    SIMULATED_STARTING_CASH = MICRO_ACCOUNT_SIZE
+
 # GPT model configuration (centralized so all modules use the same model)
 GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4o-mini")
 

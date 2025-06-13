@@ -26,18 +26,45 @@ from alpaca.trade_manager import TradeManager
 from alpaca.chatgpt_advisor import get_account_overview
 from alpaca.llm_vetter import LLMVetter
 from alpaca.risk_manager import RiskManager
-from config import DEFAULT_TICKERS, EXCLUDE_TICKERS, DEFAULT_TICKERS_FROM_GPT, SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, NOTIFICATION_EMAIL
+from config import (
+    DEFAULT_TICKERS,
+    EXCLUDE_TICKERS,
+    DEFAULT_TICKERS_FROM_GPT,
+    SMTP_SERVER,
+    SMTP_PORT,
+    SMTP_USERNAME,
+    SMTP_PASSWORD,
+    NOTIFICATION_EMAIL,
+    MICRO_MODE,
+)
 
 class TradingBot:
-    def __init__(self, auto_confirm=False, vet_trade_logic=True, vetter_vendor="local",
-                 risk_threshold=0.6, allocation_limit=0.05, notify_on_trade=False):
-        """
-        Initialize the TradingBot and all its components.
+    def __init__(
+        self,
+        auto_confirm=False,
+        vet_trade_logic=True,
+        vetter_vendor="local",
+        risk_threshold=0.6,
+        allocation_limit=0.05,
+        notify_on_trade=False,
+        micro_mode=MICRO_MODE,
+    ):
+        """Initialize the :class:`TradingBot` and its components.
+
+        Args:
+            auto_confirm (bool): Automatically confirm trades if ``True``.
+            vet_trade_logic (bool): Run trade logic through the LLM vetter.
+            vetter_vendor (str): Backend used for vetting.
+            risk_threshold (float): Minimum probability of profit.
+            allocation_limit (float): Base fraction of buying power per trade.
+            notify_on_trade (bool): Send email notifications when trades execute.
+            micro_mode (bool): Enable small account mode with relaxed sizing.
         """
         self.auto_confirm = auto_confirm
         self.vet_trade_logic = vet_trade_logic
         self.risk_threshold = risk_threshold
-        self.allocation_limit = allocation_limit
+        self.micro_mode = micro_mode
+        self.allocation_limit = allocation_limit if not micro_mode else max(1.0, allocation_limit)
         self.notify_on_trade = notify_on_trade
 
         self.logger = logging.getLogger(__name__)
@@ -60,7 +87,10 @@ class TradingBot:
         self.portfolio = PortfolioManager()
         self.trader = TradeManager()
         self.vetter = LLMVetter(vendor=vetter_vendor)
-        self.risk_manager = RiskManager(base_allocation_limit=allocation_limit, base_risk_threshold=risk_threshold)
+        self.risk_manager = RiskManager(
+            base_allocation_limit=self.allocation_limit,
+            base_risk_threshold=risk_threshold,
+        )
         self.session_summary = []  # List of dicts with evaluation/execution info
         self.trade_tracker = []    # New: list to track detailed trade info
 
@@ -204,6 +234,8 @@ class TradingBot:
         return final_list
 
     def evaluate_trade(self, symbol):
+        """Evaluate whether to trade ``symbol`` and return order details."""
+
         self.logger.info("Evaluating trade for %s", symbol)
         adjusted_allocation, adjusted_risk_threshold = self.risk_manager.adjust_parameters(symbol)
         self.logger.info("Adjusted allocation: %.4f, Adjusted risk threshold: %.4f", adjusted_allocation, adjusted_risk_threshold)
@@ -264,8 +296,11 @@ class TradingBot:
         max_qty = max_allocation / current_price
         qty = int(max_qty * 0.5)
         if qty < 1:
-            self.logger.info("Insufficient buying power for %s", symbol)
-            return None
+            if self.micro_mode and buying_power >= current_price:
+                qty = 1
+            else:
+                self.logger.info("Insufficient buying power for %s", symbol)
+                return None
         # Set stop loss and profit target values
         stop_loss = current_price * 0.95
         profit_target = current_price * 1.10

@@ -17,3 +17,11 @@ project/
 ├── transaction_logger.py
 ├── config.py
 ```
+
+## Micro Mode
+
+Set `MICRO_MODE=true` in your `.env` file to run the bot assuming a small
+simulated account balance.  `MICRO_ACCOUNT_SIZE` controls the starting cash
+when micro mode is enabled (defaults to `$100`).  This mode automatically
+increases trade allocation limits so the bot can purchase at least one share
+when funds allow.
