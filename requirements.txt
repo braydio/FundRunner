@@ -11,4 +11,3 @@ openai
 PyPortfolioOpt
 mplfinance
 flask
-
