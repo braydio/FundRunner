@@ -1,10 +1,14 @@
 
-# trading_bot.py
+"""Interactive trading bot using Alpaca for market data and order routing.
+
+This module defines :class:`TradingBot`, a Rich-powered interface that evaluates
+trades using live Alpaca data and optional LLM vetting. It coordinates account
+info retrieval, position monitoring and order execution.
+"""
 import asyncio
 import logging
 import math
 import sys
-import yfinance as yf
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -22,18 +26,45 @@ from alpaca.trade_manager import TradeManager
 from alpaca.chatgpt_advisor import get_account_overview
 from alpaca.llm_vetter import LLMVetter
 from alpaca.risk_manager import RiskManager
-from config import DEFAULT_TICKERS, EXCLUDE_TICKERS, DEFAULT_TICKERS_FROM_GPT, SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, NOTIFICATION_EMAIL
+from config import (
+    DEFAULT_TICKERS,
+    EXCLUDE_TICKERS,
+    DEFAULT_TICKERS_FROM_GPT,
+    SMTP_SERVER,
+    SMTP_PORT,
+    SMTP_USERNAME,
+    SMTP_PASSWORD,
+    NOTIFICATION_EMAIL,
+    MICRO_MODE,
+)
 
 class TradingBot:
-    def __init__(self, auto_confirm=False, vet_trade_logic=True, vetter_vendor="local",
-                 risk_threshold=0.6, allocation_limit=0.05, notify_on_trade=False):
-        """
-        Initialize the TradingBot and all its components.
+    def __init__(
+        self,
+        auto_confirm=False,
+        vet_trade_logic=True,
+        vetter_vendor="local",
+        risk_threshold=0.6,
+        allocation_limit=0.05,
+        notify_on_trade=False,
+        micro_mode=MICRO_MODE,
+    ):
+        """Initialize the :class:`TradingBot` and its components.
+
+        Args:
+            auto_confirm (bool): Automatically confirm trades if ``True``.
+            vet_trade_logic (bool): Run trade logic through the LLM vetter.
+            vetter_vendor (str): Backend used for vetting.
+            risk_threshold (float): Minimum probability of profit.
+            allocation_limit (float): Base fraction of buying power per trade.
+            notify_on_trade (bool): Send email notifications when trades execute.
+            micro_mode (bool): Enable small account mode with relaxed sizing.
         """
         self.auto_confirm = auto_confirm
         self.vet_trade_logic = vet_trade_logic
         self.risk_threshold = risk_threshold
-        self.allocation_limit = allocation_limit
+        self.micro_mode = micro_mode
+        self.allocation_limit = allocation_limit if not micro_mode else max(1.0, allocation_limit)
         self.notify_on_trade = notify_on_trade
 
         self.logger = logging.getLogger(__name__)
@@ -56,7 +87,10 @@ class TradingBot:
         self.portfolio = PortfolioManager()
         self.trader = TradeManager()
         self.vetter = LLMVetter(vendor=vetter_vendor)
-        self.risk_manager = RiskManager(base_allocation_limit=allocation_limit, base_risk_threshold=risk_threshold)
+        self.risk_manager = RiskManager(
+            base_allocation_limit=self.allocation_limit,
+            base_risk_threshold=risk_threshold,
+        )
         self.session_summary = []  # List of dicts with evaluation/execution info
         self.trade_tracker = []    # New: list to track detailed trade info
 
@@ -200,6 +234,8 @@ class TradingBot:
         return final_list
 
     def evaluate_trade(self, symbol):
+        """Evaluate whether to trade ``symbol`` and return order details."""
+
         self.logger.info("Evaluating trade for %s", symbol)
         adjusted_allocation, adjusted_risk_threshold = self.risk_manager.adjust_parameters(symbol)
         self.logger.info("Adjusted allocation: %.4f, Adjusted risk threshold: %.4f", adjusted_allocation, adjusted_risk_threshold)
@@ -220,14 +256,15 @@ class TradingBot:
             return None
         # Compute equity trade metrics using historical data
         try:
-            hist = yf.download(symbol, period="1mo", interval="1d", auto_adjust=False)
-            if hist.empty:
+            hist = self.client.get_historical_bars(symbol, days=30)
+            if hist is None or hist.empty:
                 self.logger.warning("No historical data for %s", symbol)
                 probability_of_profit = 0.55
                 expected_net_value = 0.02
                 es_metric = None
             else:
-                returns = hist['Close'].pct_change().dropna()
+                close_col = 'close' if 'close' in hist.columns else 'Close'
+                returns = hist[close_col].pct_change().dropna()
                 mean_return = returns.mean().item() if hasattr(returns.mean(), 'item') else float(returns.mean())
                 volatility = returns.std().item() if hasattr(returns.std(), 'item') else float(returns.std())
                 if volatility > 0:
@@ -249,8 +286,9 @@ class TradingBot:
             self.logger.info("Trade for %s rejected: probability=%.2f, expected_net=%.4f", symbol, probability_of_profit, expected_net_value)
             return None
         try:
-            ticker_data = yf.Ticker(symbol)
-            current_price = ticker_data.info['regularMarketPrice']
+            current_price = self.client.get_latest_price(symbol)
+            if current_price is None:
+                raise ValueError("Price not available")
         except Exception as e:
             self.logger.error("Error fetching price for %s: %s", symbol, e)
             return None
@@ -258,8 +296,11 @@ class TradingBot:
         max_qty = max_allocation / current_price
         qty = int(max_qty * 0.5)
         if qty < 1:
-            self.logger.info("Insufficient buying power for %s", symbol)
-            return None
+            if self.micro_mode and buying_power >= current_price:
+                qty = 1
+            else:
+                self.logger.info("Insufficient buying power for %s", symbol)
+                return None
         # Set stop loss and profit target values
         stop_loss = current_price * 0.95
         profit_target = current_price * 1.10

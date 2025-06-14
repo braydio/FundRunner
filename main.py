@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt
-from config import SIMULATED_STARTING_CASH, SIMULATION_MODE
+from config import SIMULATED_STARTING_CASH, SIMULATION_MODE, MICRO_MODE
 
 class CLI:
     def __init__(self):
@@ -330,10 +330,16 @@ class CLI:
             self.console.print(f"[red]Error retrieving trading advice: {e}[/red]")
 
     def run_trading_bot(self):
+        """Launch the trading bot with optional symbol overrides."""
         symbols_input = Prompt.ask("Enter symbols (comma separated) for the trading bot (or press Enter to use default)")
         symbols = [s.strip().upper() for s in symbols_input.split(',') if s.strip()]
         try:
-            bot = TradingBot(auto_confirm=False, vet_trade_logic=True, vetter_vendor="local")
+            bot = TradingBot(
+                auto_confirm=False,
+                vet_trade_logic=True,
+                vetter_vendor="local",
+                micro_mode=MICRO_MODE,
+            )
             asyncio.run(bot.run(symbols if symbols else None))
         except Exception as e:
             self.console.print(f"[red]Error running trading bot: {e}[/red]")
