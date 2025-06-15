@@ -1,10 +1,18 @@
-# cli.py
+"""Interactive command-line interface for trading operations.
+
+This module exposes the :class:`CLI` class which presents a text-based menu
+for viewing account information, managing watchlists, executing trades and
+running automated trading bots.  Executing the module runs
+``CLI.run`` for an interactive session.
+"""
+
 import sys
 import asyncio
 from alpaca.trade_manager import TradeManager
 from alpaca.portfolio_manager import PortfolioManager
 from alpaca.watchlist_manager import WatchlistManager
 from alpaca.trading_bot import TradingBot
+
 
 class CLI:
     def __init__(self):
@@ -43,13 +51,17 @@ class CLI:
                         print("No watchlists found.")
                     else:
                         for wl in watchlists:
-                            symbols = ', '.join(wl.symbols) if hasattr(wl, 'symbols') else "N/A"
+                            symbols = (
+                                ", ".join(wl.symbols)
+                                if hasattr(wl, "symbols")
+                                else "N/A"
+                            )
                             print(f"ID: {wl.id}, Name: {wl.name}, Symbols: {symbols}")
                 except Exception as e:
                     print(f"Error listing watchlists: {e}")
             elif choice == "2":
                 name = input("Enter watchlist name: ")
-                symbols = input("Enter symbols (comma separated): ").upper().split(',')
+                symbols = input("Enter symbols (comma separated): ").upper().split(",")
                 symbols = [s.strip() for s in symbols]
                 try:
                     wl = self.watchlist_manager.create_watchlist(name, symbols)
@@ -76,7 +88,7 @@ class CLI:
                 wl_id = input("Enter watchlist ID: ")
                 try:
                     watchlist = self.watchlist_manager.get_watchlist(wl_id)
-                    assets = watchlist.assets if hasattr(watchlist, 'assets') else "N/A"
+                    assets = watchlist.assets if hasattr(watchlist, "assets") else "N/A"
                     print(f"Watchlist '{watchlist.name}': {assets}")
                 except Exception as e:
                     print(f"Error retrieving watchlist: {e}")
@@ -101,7 +113,7 @@ class CLI:
             print("Quantity must be an integer.")
             return
         side = input("Enter side (buy/sell): ").lower().strip()
-        if side not in ['buy', 'sell']:
+        if side not in ["buy", "sell"]:
             print("Side must be either 'buy' or 'sell'.")
             return
         order_type = input("Enter order type (market/limit): ").lower().strip()
@@ -109,9 +121,9 @@ class CLI:
 
         order = None
         try:
-            if side == 'buy':
+            if side == "buy":
                 order = self.trade_manager.buy(symbol, qty, order_type, time_in_force)
-            elif side == 'sell':
+            elif side == "sell":
                 order = self.trade_manager.sell(symbol, qty, order_type, time_in_force)
             if order:
                 print(f"Order submitted:\n{order}")
@@ -128,8 +140,10 @@ class CLI:
             else:
                 print("\n--- Open Orders ---")
                 for order in orders:
-                    print(f"ID: {order.id}, Symbol: {order.symbol}, Side: {order.side}, "
-                          f"Qty: {order.qty}, Status: {order.status}")
+                    print(
+                        f"ID: {order.id}, Symbol: {order.symbol}, Side: {order.side}, "
+                        f"Qty: {order.qty}, Status: {order.status}"
+                    )
         except Exception as e:
             print(f"Error retrieving open orders: {e}")
 
@@ -152,8 +166,10 @@ class CLI:
             else:
                 print("\n--- Portfolio Positions & P/L ---")
                 for pos in positions:
-                    pl = getattr(pos, 'unrealized_pl', 'N/A')
-                    print(f"Symbol: {pos.symbol}, Qty: {pos.qty}, Market Value: {pos.market_value}, P/L: {pl}")
+                    pl = getattr(pos, "unrealized_pl", "N/A")
+                    print(
+                        f"Symbol: {pos.symbol}, Qty: {pos.qty}, Market Value: {pos.market_value}, P/L: {pl}"
+                    )
         except Exception as e:
             print(f"Error retrieving positions: {e}")
 
@@ -161,6 +177,7 @@ class CLI:
         prompt = input("Enter your prompt for trading advice: ")
         try:
             from chatgpt_advisor import get_account_overview
+
             advice = get_account_overview(prompt)
             print("\n--- Trading Advice ---")
             print(advice)
@@ -169,7 +186,13 @@ class CLI:
 
     def run_trading_bot(self):
         """Prompt for symbols and launch :class:`TradingBot`."""
-        symbols = input("Enter symbols (comma separated) for the trading bot (or press Enter to use default): ").upper().split(',')
+        symbols = (
+            input(
+                "Enter symbols (comma separated) for the trading bot (or press Enter to use default): "
+            )
+            .upper()
+            .split(",")
+        )
         symbols = [s.strip() for s in symbols if s.strip()]
         try:
             bot = TradingBot(
@@ -185,6 +208,7 @@ class CLI:
     def launch_watchlist_view(self):
         try:
             from watchlist_view import main as watchlist_view_main
+
             watchlist_view_main()
         except Exception as e:
             print(f"Error launching watchlist view: {e}")
@@ -215,7 +239,7 @@ class CLI:
             else:
                 print("Invalid option. Please try again.")
 
+
 if __name__ == "__main__":
     cli = CLI()
     cli.run()
-
