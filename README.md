@@ -32,19 +32,6 @@ paper trading and data endpoints.
 
 ## Dependencies
 
-The project relies on a small set of third-party libraries. After auditing the source code and tests, the following packages remain in `requirements.txt`:
-
-- alpaca-trade-api
-- python-dotenv
-- requests
-- rich
-- pandas
-- numpy
-- transformers
-- torch
-- tiktoken
-- openai
-- PyPortfolioOpt
-- mplfinance
-
-All packages are actively imported somewhere in the codebase or the accompanying tests.
+The project ships with a small HTTP daemon for controlling the bot. See
+[docs/trading_daemon.md](docs/trading_daemon.md) for endpoint details and usage
+examples.
