@@ -26,7 +26,11 @@ when micro mode is enabled (defaults to `$100`).  This mode automatically
 increases trade allocation limits so the bot can purchase at least one share
 when funds allow.
 
-## Trading Daemon
+The Alpaca trading API base URL is configured via `ALPACA_BASE_URL` and the
+market data API via `ALPACA_DATA_URL` in your `.env` file. Both default to the
+paper trading and data endpoints.
+
+## Dependencies
 
 The project ships with a small HTTP daemon for controlling the bot. See
 [docs/trading_daemon.md](docs/trading_daemon.md) for endpoint details and usage

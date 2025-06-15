@@ -8,6 +8,7 @@ load_dotenv()
 API_KEY = os.getenv("ALPACA_API_KEY", "your_api_key_here")
 API_SECRET = os.getenv("ALPACA_API_SECRET", "your_api_secret_here")
 BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+DATA_URL = os.getenv("ALPACA_DATA_URL", "https://data.alpaca.markets")
 
 # OpenAI API key for ChatGPT integration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
