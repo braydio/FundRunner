@@ -1,145 +1,107 @@
-"""Automated trading scheduler and risk guardrails.
-
-This daemon activates trading during market hours, enforces basic daily
-limits and persists metrics between runs. Trade statistics are stored in a
-JSON file and reset at the start of each trading day.
-"""
-
-from __future__ import annotations
+"""Async trading daemon with Flask command API."""
 
 import asyncio
-import json
-from dataclasses import dataclass
-from datetime import datetime, time, timezone
-from pathlib import Path
+from dataclasses import dataclass, asdict
 from typing import Optional
 
+from flask import Flask, jsonify, request
+
 from alpaca.trading_bot import TradingBot
+from options_trading_bot import run_options_analysis
 
 
 @dataclass
-class TradingLimits:
-    """Configuration for trading risk limits."""
+class DaemonState:
+    """Shared state for :mod:`trading_daemon`."""
 
-    max_trades_per_hour: int = 10
-    daily_stop_loss: float = 1000.0
-    daily_profit_target: float = 1000.0
-
-
-@dataclass
-class TradingSchedule:
-    """Configuration for trading start and end times in UTC."""
-
-    start: time = time(8, 0)  # pre-market open
-    end: time = time(20, 0)  # after extended hours
-
-
-@dataclass
-class TradingState:
-    """Persistent metrics for a single trading day."""
-
-    date: str = ""
+    mode: str = "stocks"
+    paused: bool = False
     trade_count: int = 0
-    profit: float = 0.0
+    daily_pl: float = 0.0
 
-    def reset(self, date: str) -> None:
-        self.date = date
-        self.trade_count = 0
-        self.profit = 0.0
+    def to_dict(self) -> dict:
+        """Return a JSON-serialisable view of the daemon state."""
+        return asdict(self)
 
 
-class TradingDaemon:
-    """Schedules :class:`TradingBot` runs and tracks daily metrics."""
+state = DaemonState()
+app = Flask(__name__)
 
-    def __init__(
-        self,
-        bot: TradingBot,
-        limits: Optional[TradingLimits] = None,
-        schedule: Optional[TradingSchedule] = None,
-        state_path: str | Path = "trading_state.json",
-    ) -> None:
-        self.bot = bot
-        self.limits = limits or TradingLimits()
-        self.schedule = schedule or TradingSchedule()
-        self.state_file = Path(state_path)
-        self.state = TradingState()
-        self._last_hour: Optional[datetime] = None
-        self.load_state()
+_loop_task: Optional[asyncio.Task] = None
 
-    # ------------------------------------------------------------------
-    # Construction helpers
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _parse_time(value: str) -> time:
-        hour, minute = (int(x) for x in value.split(":", 1))
-        return time(hour, minute)
 
-    @classmethod
-    def from_config(cls, bot: TradingBot, cfg) -> "TradingDaemon":
-        """Create a daemon using values from :mod:`config`."""
-        limits = TradingLimits(
-            max_trades_per_hour=cfg.MAX_TRADES_PER_HOUR,
-            daily_stop_loss=cfg.DAILY_STOP_LOSS,
-            daily_profit_target=cfg.DAILY_PROFIT_TARGET,
-        )
-        schedule = TradingSchedule(
-            start=cls._parse_time(cfg.PRE_MARKET_START),
-            end=cls._parse_time(cfg.EXTENDED_HOURS_END),
-        )
-        return cls(bot, limits=limits, schedule=schedule)
+async def trading_loop() -> None:
+    """Main asynchronous trading loop."""
+    global state
+    while True:
+        if not state.paused:
+            if state.mode == "stocks":
+                bot = TradingBot(auto_confirm=True)
+                await bot.run()
+                state.trade_count += len(bot.session_summary)
+            elif state.mode == "options":
+                await run_options_analysis()
+            # Placeholder for P/L aggregation; depends on bot implementation
+        await asyncio.sleep(5)
 
-    def load_state(self) -> None:
-        if self.state_file.exists():
-            try:
-                with self.state_file.open("r") as f:
-                    data = json.load(f)
-                self.state = TradingState(**data)
-            except Exception:
-                self.state = TradingState()
-        today = datetime.now(timezone.utc).date().isoformat()
-        if self.state.date != today:
-            self.state.reset(today)
-            self.save_state()
 
-    def save_state(self) -> None:
-        with self.state_file.open("w") as f:
-            json.dump(self.state.__dict__, f)
+@app.route("/status", methods=["GET"])
+def status() -> 'flask.Response':
+    """Return current daemon status."""
+    return jsonify(state.to_dict())
 
-    def record_trade(self, profit: float) -> None:
-        """Record a trade and update persistent metrics."""
-        self.load_state()
-        self.state.trade_count += 1
-        self.state.profit += profit
-        self.save_state()
 
-    def _within_schedule(self, now: datetime) -> bool:
-        return self.schedule.start <= now.time() <= self.schedule.end
+@app.route("/order", methods=["POST"])
+def order() -> 'flask.Response':
+    """Execute a simple market order via :class:`TradingBot`."""
+    data = request.get_json(force=True) or {}
+    details = {
+        "symbol": data.get("symbol", "AAPL"),
+        "qty": int(data.get("qty", 1)),
+        "side": data.get("side", "buy"),
+        "order_type": "market",
+        "time_in_force": "gtc",
+    }
 
-    def limits_hit(self) -> bool:
-        """Return ``True`` if daily risk limits have been exceeded."""
-        if self.state.profit <= -self.limits.daily_stop_loss:
-            return True
-        if self.state.profit >= self.limits.daily_profit_target:
-            return True
-        if self.state.trade_count >= self.limits.max_trades_per_hour:
-            hour_start = datetime.now(timezone.utc).replace(
-                minute=0, second=0, microsecond=0
-            )
-            if self._last_hour != hour_start:
-                self._last_hour = hour_start
-                self.state.trade_count = 0
-                self.save_state()
-            else:
-                return True
-        return False
+    async def _trade():
+        bot = TradingBot(auto_confirm=True)
+        await bot.execute_trade(details)
 
-    async def run(
-        self, symbols: Optional[list[str]] = None, poll_interval: int = 300
-    ) -> None:
-        """Continuously run trading sessions when schedule allows."""
-        while True:
-            self.load_state()
-            now = datetime.now(timezone.utc)
-            if self._within_schedule(now) and not self.limits_hit():
-                await self.bot.run(symbols)
-            await asyncio.sleep(poll_interval)
+    asyncio.run(_trade())
+    state.trade_count += 1
+    return jsonify({"status": "submitted"})
+
+
+@app.route("/pause", methods=["POST"])
+def pause() -> 'flask.Response':
+    """Pause the trading loop."""
+    state.paused = True
+    return jsonify({"paused": state.paused})
+
+
+@app.route("/resume", methods=["POST"])
+def resume() -> 'flask.Response':
+    """Resume the trading loop."""
+    state.paused = False
+    return jsonify({"paused": state.paused})
+
+
+@app.route("/mode", methods=["POST"])
+def set_mode() -> 'flask.Response':
+    """Update active trading mode."""
+    data = request.get_json(force=True) or {}
+    state.mode = data.get("mode", state.mode)
+    return jsonify({"mode": state.mode})
+
+
+def start() -> None:
+    """Start trading loop and Flask app."""
+    global _loop_task
+    loop = asyncio.get_event_loop()
+    if _loop_task is None:
+        _loop_task = loop.create_task(trading_loop())
+    app.run(debug=False, use_reloader=False)
+
+
+if __name__ == "__main__":
+    start()

@@ -1,21 +1,17 @@
-import json
-from services.trading_daemon import TradingDaemon
+from services.trading_daemon import app, state
 
 
-class DummyBot:
-    async def run(self, symbols=None):
-        pass
+def test_status_endpoint():
+    with app.test_client() as client:
+        resp = client.get('/status')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert 'mode' in data and 'paused' in data
 
 
-def test_metrics_reset(tmp_path):
-    state_file = tmp_path / "state.json"
-    daemon = TradingDaemon(DummyBot(), state_path=state_file)
-    daemon.record_trade(5)
-    assert json.loads(state_file.read_text())["trade_count"] == 1
-
-    # Force reset by simulating new day
-    daemon.state.date = "1900-01-01"
-    daemon.save_state()
-    daemon.load_state()
-    assert daemon.state.trade_count == 0
-    assert daemon.state.profit == 0
+def test_pause_resume():
+    with app.test_client() as client:
+        client.post('/pause')
+        assert state.paused is True
+        client.post('/resume')
+        assert state.paused is False
