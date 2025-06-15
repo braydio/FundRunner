@@ -1,5 +1,6 @@
 
-# cli.py
+"""Interactive CLI for managing the trading bot and daemon."""
+
 import sys
 import asyncio
 import json
@@ -14,6 +15,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt
 from config import SIMULATED_STARTING_CASH, SIMULATION_MODE, MICRO_MODE
+import requests
 
 class CLI:
     def __init__(self):
@@ -131,6 +133,9 @@ class CLI:
             "[bold yellow]7.[/bold yellow] Run Trading Bot\n"
             "[bold yellow]8.[/bold yellow] Watchlist View\n"
             "[bold yellow]9.[/bold yellow] Run Options Trading Evaluation Session\n"
+            "[bold yellow]10.[/bold yellow] Start Trading Daemon\n"
+            "[bold yellow]11.[/bold yellow] Stop Trading Daemon\n"
+            "[bold yellow]12.[/bold yellow] Trading Daemon Status\n"
             "[bold yellow]0.[/bold yellow] Exit\n"
         )
         menu_panel = Panel.fit(menu_text, title="[bold red]Main Menu[/bold red]", border_style="blue")
@@ -358,10 +363,34 @@ class CLI:
         except Exception as e:
             self.console.print(f"[red]Error launching watchlist view: {e}[/red]")
 
+    def start_daemon(self):
+        """Send a request to start the trading daemon."""
+        try:
+            r = requests.post("http://127.0.0.1:8000/start")
+            self.console.print(str(r.json()))
+        except Exception as e:
+            self.console.print(f"[red]Error starting daemon: {e}[/red]")
+
+    def stop_daemon(self):
+        """Send a request to stop the trading daemon."""
+        try:
+            r = requests.post("http://127.0.0.1:8000/stop")
+            self.console.print(str(r.json()))
+        except Exception as e:
+            self.console.print(f"[red]Error stopping daemon: {e}[/red]")
+
+    def daemon_status(self):
+        """Display the current daemon status."""
+        try:
+            r = requests.get("http://127.0.0.1:8000/status")
+            self.console.print(str(r.json()))
+        except Exception as e:
+            self.console.print(f"[red]Error retrieving daemon status: {e}[/red]")
+
     def run(self):
         while True:
             self.print_menu()
-            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
+            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"])
             if choice == "1":
                 self.view_account_info()
             elif choice == "2":
@@ -380,6 +409,12 @@ class CLI:
                 self.launch_watchlist_view()
             elif choice == "9":
                 self.run_options_trading_session()
+            elif choice == "10":
+                self.start_daemon()
+            elif choice == "11":
+                self.stop_daemon()
+            elif choice == "12":
+                self.daemon_status()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
                 sys.exit(0)

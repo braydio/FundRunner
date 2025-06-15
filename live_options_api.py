@@ -1,7 +1,7 @@
 # live_options_api.py
 import requests
 import logging
-from config import BASE_URL, API_KEY, API_SECRET
+from config import BASE_URL, DATA_URL, API_KEY, API_SECRET
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ def get_live_options_chain(symbol, expiration=None):
     Returns:
         dict: JSON data containing the options chain or None on error.
     """
-    url = f"{BASE_URL}/options/contracts"
+    url = f"{DATA_URL}/v2/options/contracts"
     headers = {
         "APCA-API-KEY-ID": API_KEY,
         "APCA-API-SECRET-KEY": API_SECRET,
@@ -35,7 +35,7 @@ def get_live_options_chain(symbol, expiration=None):
 
 def get_latest_stock_price(symbol):
     """Fetch the latest trade price for a stock using Alpaca's market data API."""
-    url = f"{BASE_URL}/v2/stocks/{symbol}/trades/latest"
+    url = f"{DATA_URL}/v2/stocks/{symbol}/trades/latest"
     headers = {
         "APCA-API-KEY-ID": API_KEY,
         "APCA-API-SECRET-KEY": API_SECRET,
