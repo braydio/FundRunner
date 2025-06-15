@@ -1,115 +1,157 @@
-"""Asynchronous trading daemon with runtime control endpoints."""
+"""Asynchronous trading daemon exposing simple Flask endpoints."""
+
+from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, asdict
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from threading import Thread, Lock
 
 from flask import Flask, jsonify, request
 
+from alpaca.trade_manager import TradeManager
+from alpaca.portfolio_manager import PortfolioManager
 from alpaca.trading_bot import TradingBot
 from options_trading_bot import run_options_analysis
 
 
 @dataclass
 class DaemonState:
-    """Shared state for :class:`TradingDaemon`."""
+    """Shared daemon state for runtime control."""
 
-    mode: str = "stocks"
+    mode: str = "stock"
     paused: bool = False
     trade_count: int = 0
     daily_pl: float = 0.0
+    start_value: float = 0.0
 
 
-class TradingDaemon:
-    """Background trading loop controller."""
+state = DaemonState()
+state_lock = Lock()
+trade_manager = TradeManager()
+portfolio = PortfolioManager()
 
-    def __init__(self, state: DaemonState):
-        self.state = state
-        self.bot = TradingBot()
-        self._task: Optional[asyncio.Task] = None
-        self.start_equity: float = 0.0
+app = Flask(__name__)
 
-    async def trading_loop(self) -> None:
-        """Continuously run the selected trading mode."""
-        account = self.bot.portfolio.view_account()
-        self.start_equity = float(account.get("equity", 0.0) or 0.0)
-        while True:
-            if self.state.paused:
-                await asyncio.sleep(1)
-                continue
-            if self.state.mode == "stocks":
-                await self.bot.run()
-                self.state.trade_count += len(self.bot.session_summary)
-            else:
+
+async def trading_loop() -> None:
+    """Main trading loop that delegates to the appropriate bot."""
+
+    while True:
+        with state_lock:
+            paused = state.paused
+            mode = state.mode
+        if paused:
+            await asyncio.sleep(1)
+            continue
+
+        try:
+            if mode == "options":
                 await run_options_analysis()
-            account = self.bot.portfolio.view_account()
-            current_equity = float(account.get("equity", 0.0) or 0.0)
-            self.state.daily_pl = current_equity - self.start_equity
-            await asyncio.sleep(5)
+            else:
+                bot = TradingBot(auto_confirm=True, vet_trade_logic=False)
+                await bot.run()
+                del bot
+            with state_lock:
+                state.trade_count += 1
+        except Exception:
+            # Swallow exceptions so the loop keeps running
+            await asyncio.sleep(1)
+            continue
 
-    def start(self) -> None:
-        """Launch the trading loop if not already running."""
-        if not self._task:
-            self._task = asyncio.create_task(self.trading_loop())
+        # Update P/L
+        try:
+            account = portfolio.view_account()
+            with state_lock:
+                if state.start_value == 0.0:
+                    state.start_value = float(
+                        account.get("portfolio_value", 0.0)
+                    )
+                current_value = float(account.get("portfolio_value", 0.0))
+                state.daily_pl = current_value - state.start_value
+        except Exception:
+            pass
 
-    def pause(self) -> None:
-        self.state.paused = True
-
-    def resume(self) -> None:
-        self.state.paused = False
-
-    def set_mode(self, mode: str) -> None:
-        self.state.mode = mode
+        await asyncio.sleep(1)
 
 
-def create_app(state: DaemonState) -> Tuple[Flask, TradingDaemon]:
-    """Create the Flask app and associated daemon."""
-    app = Flask(__name__)
-    daemon = TradingDaemon(state)
+@app.route("/status", methods=["GET"])
+def status() -> tuple:
+    """Return current daemon status."""
 
-    @app.before_first_request
-    def _start() -> None:
-        daemon.start()
+    with state_lock:
+        data = {
+            "mode": state.mode,
+            "paused": state.paused,
+            "trade_count": state.trade_count,
+            "daily_pl": state.daily_pl,
+        }
+    return jsonify(data)
 
-    @app.route("/status")
-    def status() -> "flask.Response":
-        return jsonify(asdict(state))
 
-    @app.route("/order", methods=["POST"])
-    def order():
-        data = request.get_json(force=True)
-        symbol = data.get("symbol")
-        qty = int(data.get("qty", 1))
-        side = data.get("side", "buy")
-        if state.mode != "stocks":
-            return jsonify({"error": "Orders only supported in stock mode"}), 400
-        if side == "buy":
-            order = daemon.bot.trader.buy(symbol, qty)
+@app.route("/order", methods=["POST"])
+def order() -> tuple:
+    """Submit a simple market order."""
+
+    data = request.get_json(force=True)
+    symbol = data.get("symbol")
+    side = data.get("side", "buy").lower()
+    qty = int(data.get("qty", 1))
+    if not symbol:
+        return jsonify({"error": "symbol required"}), 400
+    try:
+        if side == "sell":
+            trade_manager.sell(symbol, qty)
         else:
-            order = daemon.bot.trader.sell(symbol, qty)
-        state.trade_count += 1
-        return jsonify({"id": getattr(order, "id", None)})
+            trade_manager.buy(symbol, qty)
+        with state_lock:
+            state.trade_count += 1
+        return jsonify({"status": "submitted"})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
-    @app.route("/pause", methods=["POST"])
-    def pause():
-        daemon.pause()
-        return jsonify({"paused": True})
 
-    @app.route("/resume", methods=["POST"])
-    def resume():
-        daemon.resume()
-        return jsonify({"paused": False})
+@app.route("/pause", methods=["POST"])
+def pause() -> tuple:
+    """Pause the trading loop."""
 
-    @app.route("/mode", methods=["POST"])
-    def mode():
-        mode_val = request.get_json(force=True).get("mode", "stocks")
-        daemon.set_mode(mode_val)
-        return jsonify({"mode": state.mode})
+    with state_lock:
+        state.paused = True
+    return jsonify({"status": "paused"})
 
-    return app, daemon
+
+@app.route("/resume", methods=["POST"])
+def resume() -> tuple:
+    """Resume the trading loop."""
+
+    with state_lock:
+        state.paused = False
+    return jsonify({"status": "running"})
+
+
+@app.route("/mode", methods=["POST"])
+def set_mode() -> tuple:
+    """Set active trading mode."""
+
+    data = request.get_json(force=True)
+    mode = data.get("mode", "stock")
+    if mode not in {"stock", "options"}:
+        return jsonify({"error": "mode must be 'stock' or 'options'"}), 400
+    with state_lock:
+        state.mode = mode
+    return jsonify({"status": "mode updated", "mode": mode})
+
+
+def _run_flask() -> None:
+    app.run(host="0.0.0.0", port=8000)
+
+
+def main() -> None:
+    loop = asyncio.get_event_loop()
+    loop.create_task(trading_loop())
+    server_thread = Thread(target=_run_flask, daemon=True)
+    server_thread.start()
+    loop.run_forever()
 
 
 if __name__ == "__main__":
-    shared_state = DaemonState()
-    app, _ = create_app(shared_state)
-    app.run(host="0.0.0.0", port=8000)
+    main()
