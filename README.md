@@ -28,15 +28,6 @@ when funds allow.
 
 ## Trading Daemon
 
-`services/trading_daemon.py` provides a scheduler for automated trading with
-limit checks.  Configure the behavior via environment variables defined in
-`config.py`:
-
-- `MAX_TRADES_PER_HOUR` – maximum trades allowed each hour
-- `DAILY_STOP_LOSS` – cumulative loss threshold before trading stops
-- `DAILY_PROFIT_TARGET` – profit target that disables trading for the day
-- `PRE_MARKET_START` – UTC time when trading begins (e.g. `08:00`)
-- `EXTENDED_HOURS_END` – UTC time when trading ends (e.g. `20:00`)
-
-Trade statistics persist in `trading_state.json` and reset at the start of
-each trading day.
+The project ships with a small HTTP daemon for controlling the bot. See
+[docs/trading_daemon.md](docs/trading_daemon.md) for endpoint details and usage
+examples.

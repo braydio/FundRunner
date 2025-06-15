@@ -10,4 +10,4 @@ tiktoken
 openai
 PyPortfolioOpt
 mplfinance
-Flask
+flask
