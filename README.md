@@ -25,3 +25,9 @@ simulated account balance.  `MICRO_ACCOUNT_SIZE` controls the starting cash
 when micro mode is enabled (defaults to `$100`).  This mode automatically
 increases trade allocation limits so the bot can purchase at least one share
 when funds allow.
+
+## Trading Daemon
+
+The project ships with a small HTTP daemon for controlling the bot. See
+[docs/trading_daemon.md](docs/trading_daemon.md) for endpoint details and usage
+examples.
