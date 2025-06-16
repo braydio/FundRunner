@@ -6,7 +6,7 @@ import logging
 import requests
 import numpy as np
 import pandas as pd
-from config import API_KEY, API_SECRET, BASE_URL
+from config import API_KEY, API_SECRET, BASE_URL, DATA_URL
 from live_options_api import (
     get_live_options_chain,
     get_latest_stock_price,
@@ -318,7 +318,7 @@ def analyze_sentiment(ticker):
         # Placeholder: Alpaca API does not provide historical daily data here.
         hist = pd.DataFrame()
         response = requests.get(
-            f"{BASE_URL}/v2/stocks/{ticker}/bars",
+            f"{DATA_URL}/v2/stocks/{ticker}/bars",
             params={"timeframe": "1Day", "limit": 20},
             headers={
                 "APCA-API-KEY-ID": API_KEY,
