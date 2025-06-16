@@ -1,5 +1,7 @@
 .venv
 .env
+paper.env
+cash.env
 __pycache__/*
 alpaca/__pycache__/*
 plugins/__pycache__/*
