@@ -50,21 +50,29 @@ def plot_trades(df, trades=None, title="Backtest Result"):
 # ----------------------------
 
 # requirements.txt: transformers, torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
-import numpy as np
+try:
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    import torch
+    import numpy as np
 
-# Load once at startup
-tokenizer = AutoTokenizer.from_pretrained("yiyanghkust/finbert-sentiment")
-model = AutoModelForSequenceClassification.from_pretrained(
-    "yiyanghkust/finbert-sentiment"
-)
+    # Load once at startup
+    tokenizer = AutoTokenizer.from_pretrained("yiyanghkust/finbert-sentiment")
+    model = AutoModelForSequenceClassification.from_pretrained(
+        "yiyanghkust/finbert-sentiment"
+    )
+except Exception:  # pragma: no cover - optional dependency may be unavailable
+    tokenizer = None
+    model = None
 
 
 def analyze_sentiment(text):
+    if tokenizer is None or model is None:
+        raise RuntimeError("FinBERT model unavailable")
     inputs = tokenizer(text, return_tensors="pt", truncation=True)
     outputs = model(**inputs)
-    scores = torch.nn.functional.softmax(outputs.logits, dim=1).detach().numpy()[0]
+    scores = (
+        torch.nn.functional.softmax(outputs.logits, dim=1).detach().numpy()[0]
+    )
     return {"positive": scores[0], "neutral": scores[1], "negative": scores[2]}
 
 
