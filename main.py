@@ -1,3 +1,8 @@
+"""Interactive console interface for FundRunner.
+
+This module provides a rich CLI for managing portfolio information,
+running the trading bot, and now controlling an HTTP trading daemon.
+"""
 
 # cli.py
 import sys
@@ -14,6 +19,8 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt
 from config import SIMULATED_STARTING_CASH, SIMULATION_MODE, MICRO_MODE
+import subprocess
+from typing import Optional
 
 class CLI:
     def __init__(self):
@@ -21,6 +28,7 @@ class CLI:
         self.portfolio_manager = PortfolioManager()
         self.watchlist_manager = WatchlistManager()
         self.console = Console()
+        self._daemon_process: Optional[subprocess.Popen] = None
 
     def extract_account_field(self, account, field):
         return account.get(field, 'N/A') if isinstance(account, dict) else getattr(account, field, 'N/A')
@@ -131,6 +139,9 @@ class CLI:
             "[bold yellow]7.[/bold yellow] Run Trading Bot\n"
             "[bold yellow]8.[/bold yellow] Watchlist View\n"
             "[bold yellow]9.[/bold yellow] Run Options Trading Evaluation Session\n"
+            "[bold yellow]10.[/bold yellow] Start Trading Daemon\n"
+            "[bold yellow]11.[/bold yellow] Stop Trading Daemon\n"
+            "[bold yellow]12.[/bold yellow] Daemon Status\n"
             "[bold yellow]0.[/bold yellow] Exit\n"
         )
         menu_panel = Panel.fit(menu_text, title="[bold red]Main Menu[/bold red]", border_style="blue")
@@ -358,10 +369,46 @@ class CLI:
         except Exception as e:
             self.console.print(f"[red]Error launching watchlist view: {e}[/red]")
 
+    def start_trading_daemon(self):
+        """Start the FastAPI trading daemon in a background process."""
+        if self._daemon_process and self._daemon_process.poll() is None:
+            self.console.print("[yellow]Trading daemon is already running.[/yellow]")
+            return
+        self._daemon_process = subprocess.Popen([
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "trading_daemon:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8000",
+        ])
+        self.console.print("[green]Trading daemon started on port 8000.[/green]")
+
+    def stop_trading_daemon(self):
+        """Terminate the background trading daemon if running."""
+        if self._daemon_process and self._daemon_process.poll() is None:
+            self._daemon_process.terminate()
+            self._daemon_process.wait()
+            self.console.print("[green]Trading daemon stopped.[/green]")
+        else:
+            self.console.print("[yellow]Trading daemon is not running.[/yellow]")
+
+    def daemon_status(self):
+        """Display whether the daemon process is running."""
+        if self._daemon_process and self._daemon_process.poll() is None:
+            self.console.print("[green]Trading daemon is running.[/green]")
+        else:
+            self.console.print("[red]Trading daemon is not running.[/red]")
+
     def run(self):
         while True:
             self.print_menu()
-            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
+            choice = Prompt.ask(
+                "Select an option",
+                choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+            )
             if choice == "1":
                 self.view_account_info()
             elif choice == "2":
@@ -380,6 +427,12 @@ class CLI:
                 self.launch_watchlist_view()
             elif choice == "9":
                 self.run_options_trading_session()
+            elif choice == "10":
+                self.start_trading_daemon()
+            elif choice == "11":
+                self.stop_trading_daemon()
+            elif choice == "12":
+                self.daemon_status()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
                 sys.exit(0)
