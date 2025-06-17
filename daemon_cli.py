@@ -3,21 +3,21 @@
 import argparse
 import requests
 
-API_BASE = "http://127.0.0.1:8000"
+from config import TRADING_DAEMON_URL
 
 
 def start() -> None:
-    resp = requests.post(f"{API_BASE}/start")
+    resp = requests.post(f"{TRADING_DAEMON_URL}/start")
     print(resp.json())
 
 
 def stop() -> None:
-    resp = requests.post(f"{API_BASE}/stop")
+    resp = requests.post(f"{TRADING_DAEMON_URL}/stop")
     print(resp.json())
 
 
 def status() -> None:
-    resp = requests.get(f"{API_BASE}/status")
+    resp = requests.get(f"{TRADING_DAEMON_URL}/status")
     print(resp.json())
 
 

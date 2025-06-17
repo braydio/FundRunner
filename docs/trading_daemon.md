@@ -1,7 +1,8 @@
 # Trading Daemon API
 
 This daemon provides a lightweight HTTP interface for controlling the
-`TradingBot`. It runs a Flask server on `http://127.0.0.1:8000`.
+`TradingBot`. It runs a Flask server on the URL defined by
+`TRADING_DAEMON_URL` in `config.py` (defaults to `http://127.0.0.1:8000`).
 
 ## Endpoints
 
@@ -34,20 +35,20 @@ python trading_daemon.py
 Switch to micro mode via HTTP:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/mode -H 'Content-Type: application/json' \
+curl -X POST $TRADING_DAEMON_URL/mode -H 'Content-Type: application/json' \
      -d '{"mode": "micro"}'
 ```
 
 Submit a market order:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/order -H 'Content-Type: application/json' \
+curl -X POST $TRADING_DAEMON_URL/order -H 'Content-Type: application/json' \
      -d '{"symbol": "AAPL", "qty": 1, "side": "buy"}'
 ```
 
 Check status:
 
 ```bash
-curl http://127.0.0.1:8000/status
+curl $TRADING_DAEMON_URL/status
 ```
 

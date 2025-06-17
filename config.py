@@ -1,4 +1,6 @@
 
+"""Central configuration values loaded from environment variables."""
+
 import os
 from dotenv import load_dotenv
 
@@ -49,6 +51,9 @@ GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4o-mini")
 
 # Tradier API key for live options data
 TRADIER_API_KEY = os.getenv("TRADIER_API_KEY", "your_tradier_api_key_here")
+
+# Base URL for the optional trading daemon API
+TRADING_DAEMON_URL = os.getenv("TRADING_DAEMON_URL", "http://127.0.0.1:8000")
 
 # Trading daemon limits
 MAX_TRADES_PER_HOUR = int(os.getenv("MAX_TRADES_PER_HOUR", "10"))
