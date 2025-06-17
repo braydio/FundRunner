@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from config import SIMULATED_STARTING_CASH, SIMULATION_MODE, MICRO_MODE
 import requests
+from config import TRADING_DAEMON_URL
 
 class CLI:
     def __init__(self):
@@ -366,7 +367,7 @@ class CLI:
     def start_daemon(self):
         """Send a request to start the trading daemon."""
         try:
-            r = requests.post("http://127.0.0.1:8000/start")
+            r = requests.post(f"{TRADING_DAEMON_URL}/start")
             self.console.print(str(r.json()))
         except Exception as e:
             self.console.print(f"[red]Error starting daemon: {e}[/red]")
@@ -374,7 +375,7 @@ class CLI:
     def stop_daemon(self):
         """Send a request to stop the trading daemon."""
         try:
-            r = requests.post("http://127.0.0.1:8000/stop")
+            r = requests.post(f"{TRADING_DAEMON_URL}/stop")
             self.console.print(str(r.json()))
         except Exception as e:
             self.console.print(f"[red]Error stopping daemon: {e}[/red]")
@@ -382,7 +383,7 @@ class CLI:
     def daemon_status(self):
         """Display the current daemon status."""
         try:
-            r = requests.get("http://127.0.0.1:8000/status")
+            r = requests.get(f"{TRADING_DAEMON_URL}/status")
             self.console.print(str(r.json()))
         except Exception as e:
             self.console.print(f"[red]Error retrieving daemon status: {e}[/red]")
