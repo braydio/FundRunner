@@ -243,10 +243,12 @@ class AlpacaClient:
         """
         from datetime import datetime, timedelta
 
-        end = datetime.utcnow()
-        start = end - timedelta(days=days)
+        end_dt = datetime.utcnow()
+        start_dt = end_dt - timedelta(days=days)
+        start = start_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        end = end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         try:
-            bars = self.api.get_bars(symbol, timeframe, start.isoformat(), end.isoformat())
+            bars = self.api.get_bars(symbol, timeframe, start, end)
             return bars.df if hasattr(bars, "df") else None
         except Exception as e:
             logger.error("Error fetching historical bars for %s: %s", symbol, e, exc_info=True)

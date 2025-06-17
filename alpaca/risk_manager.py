@@ -36,8 +36,10 @@ class RiskManager:
             (tuple): (adjusted_allocation_limit, adjusted_risk_threshold)
         """
         try:
-            end = datetime.utcnow().isoformat()
-            start = (datetime.utcnow() - timedelta(days=30)).isoformat()
+            end_dt = datetime.utcnow()
+            start_dt = end_dt - timedelta(days=30)
+            start = start_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            end = end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
             data = self.client.get_bars(symbol, start=start, end=end)
             if data.empty:
                 return self.base_allocation_limit, self.base_risk_threshold
