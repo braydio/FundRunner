@@ -7,9 +7,8 @@
 - `options__.py` – trading logic
 - `backtester.py` – strategy benchmark evaluator
 
-
 ## Setup Steps
-Codex/contributor instructions: 
+Codex/contributor instructions:
 ```
 bash scripts/setup.sh
 source .venv/bin/activate
@@ -17,7 +16,6 @@ cp .env.example .env
 edit .env with your API keys
 pytest
 ```
-
 
 ## Testing & Contribution
 - Run `pytest` after changes
@@ -36,9 +34,14 @@ Always include file names and context when asking for code.
 ## .env Config
 Data via `l.env` includes:
 - Alpaca API Keys
-Mode flags (e.g. `MICRO_MODE mode`)
+- Mode flags (e.g. `MICRO_MODE mode`)
 
 Never commit .env to git.
+
+## API Documentation
+Document each external API endpoint used in the codebase.
+Create notes under `docs/api/` linking to the official Alpaca Markets docs.
+If the documentation cannot be fetched, record that in the note.
 
 ## Todo List
 - [] Refactor options_integration.py

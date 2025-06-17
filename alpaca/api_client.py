@@ -60,6 +60,13 @@ class AlpacaClient:
             raise
 
     def submit_order(self, symbol, qty, side, order_type, time_in_force):
+        """Submit an order via the Alpaca REST API.
+
+        Fractional share orders must use ``DAY`` time in force.  This method
+        automatically switches the ``time_in_force`` to ``day`` when a
+        fractional ``qty`` is detected.
+        """
+
         logger.debug(
             "Submitting order: side=%s, qty=%s, symbol=%s, order_type=%s, time_in_force=%s",
             side,
@@ -68,6 +75,18 @@ class AlpacaClient:
             order_type,
             time_in_force,
         )
+
+        try:
+            qty_val = float(qty)
+            if qty_val % 1 != 0 and time_in_force.lower() != "day":
+                logger.debug(
+                    "Overriding time_in_force to 'day' for fractional qty %s", qty
+                )
+                time_in_force = "day"
+        except Exception:
+            # If conversion fails, just proceed with provided values
+            pass
+
         try:
             order = self.api.submit_order(
                 symbol=symbol,

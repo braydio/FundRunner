@@ -8,6 +8,7 @@ load_dotenv()
 API_KEY = os.getenv("ALPACA_API_KEY", "your_api_key_here")
 API_SECRET = os.getenv("ALPACA_API_SECRET", "your_api_secret_here")
 BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+DATA_URL = os.getenv("ALPACA_DATA_URL", "https://data.alpaca.markets")
 
 # OpenAI API key for ChatGPT integration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
@@ -49,3 +50,11 @@ GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4o-mini")
 # Tradier API key for live options data
 TRADIER_API_KEY = os.getenv("TRADIER_API_KEY", "your_tradier_api_key_here")
 
+# Trading daemon limits
+MAX_TRADES_PER_HOUR = int(os.getenv("MAX_TRADES_PER_HOUR", "10"))
+DAILY_STOP_LOSS = float(os.getenv("DAILY_STOP_LOSS", "1000"))
+DAILY_PROFIT_TARGET = float(os.getenv("DAILY_PROFIT_TARGET", "1000"))
+
+# Trading schedule (UTC times)
+PRE_MARKET_START = os.getenv("PRE_MARKET_START", "08:00")
+EXTENDED_HOURS_END = os.getenv("EXTENDED_HOURS_END", "20:00")
