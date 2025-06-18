@@ -26,10 +26,11 @@ class CLI:
         print("2. View Portfolio Positions & P/L")
         print("3. Enter a Trade (Buy/Sell)")
         print("4. View Open Orders")
-        print("5. Manage Watchlist")
-        print("6. RAG Agent - Ask Advisor")
-        print("7. Run Trading Bot")
-        print("8. Watchlist View")
+        print("5. View Order History")
+        print("6. Manage Watchlist")
+        print("7. RAG Agent - Ask Advisor")
+        print("8. Run Trading Bot")
+        print("9. Watchlist View")
         print("0. Exit")
 
     def manage_watchlist_menu(self):
@@ -127,6 +128,16 @@ class CLI:
                 order = self.trade_manager.sell(symbol, qty, order_type, time_in_force)
             if order:
                 print(f"Order submitted:\n{order}")
+                trade_details = {
+                    "symbol": symbol,
+                    "qty": qty,
+                    "side": side,
+                    "order_type": order_type,
+                    "time_in_force": time_in_force,
+                }
+                from transaction_logger import log_transaction
+                log_transaction(trade_details, order)
+                print("Trade logged to transactions.log")
             else:
                 print("Order submission failed.")
         except Exception as e:
@@ -146,6 +157,27 @@ class CLI:
                     )
         except Exception as e:
             print(f"Error retrieving open orders: {e}")
+
+    def view_order_history(self):
+        """Print recent entries from ``transactions.log``."""
+        try:
+            from transaction_logger import read_transactions
+
+            entries = read_transactions()
+            if not entries:
+                print("No order history found.")
+                return
+            print("\n--- Order History ---")
+            for entry in entries:
+                details = entry.get("trade_details", {})
+                order = entry.get("order", {})
+                print(
+                    f"{entry.get('timestamp', 'N/A')} - {details.get('symbol', order.get('symbol', 'N/A'))} "
+                    f"{details.get('side', order.get('side', ''))} {details.get('qty', order.get('qty', ''))} "
+                    f"status: {order.get('status', 'N/A')}"
+                )
+        except Exception as e:
+            print(f"Error reading order history: {e}")
 
     def view_account_info(self):
         try:
@@ -226,12 +258,14 @@ class CLI:
             elif choice == "4":
                 self.view_open_orders()
             elif choice == "5":
-                self.manage_watchlist_menu()
+                self.view_order_history()
             elif choice == "6":
-                self.get_trading_advice()
+                self.manage_watchlist_menu()
             elif choice == "7":
-                self.run_trading_bot()
+                self.get_trading_advice()
             elif choice == "8":
+                self.run_trading_bot()
+            elif choice == "9":
                 self.launch_watchlist_view()
             elif choice == "0":
                 print("Exiting the app.")
