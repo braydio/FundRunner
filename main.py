@@ -129,14 +129,15 @@ class CLI:
             "[bold yellow]2.[/bold yellow] View Portfolio Positions & P/L\n"
             "[bold yellow]3.[/bold yellow] Enter a Trade (Buy/Sell)\n"
             "[bold yellow]4.[/bold yellow] View Open Orders\n"
-            "[bold yellow]5.[/bold yellow] Manage Watchlist\n"
-            "[bold yellow]6.[/bold yellow] RAG Agent - Ask Advisor\n"
-            "[bold yellow]7.[/bold yellow] Run Trading Bot\n"
-            "[bold yellow]8.[/bold yellow] Watchlist View\n"
-            "[bold yellow]9.[/bold yellow] Run Options Trading Evaluation Session\n"
-            "[bold yellow]10.[/bold yellow] Start Trading Daemon\n"
-            "[bold yellow]11.[/bold yellow] Stop Trading Daemon\n"
-            "[bold yellow]12.[/bold yellow] Trading Daemon Status\n"
+            "[bold yellow]5.[/bold yellow] View Order History\n"
+            "[bold yellow]6.[/bold yellow] Manage Watchlist\n"
+            "[bold yellow]7.[/bold yellow] RAG Agent - Ask Advisor\n"
+            "[bold yellow]8.[/bold yellow] Run Trading Bot\n"
+            "[bold yellow]9.[/bold yellow] Watchlist View\n"
+            "[bold yellow]10.[/bold yellow] Run Options Trading Evaluation Session\n"
+            "[bold yellow]11.[/bold yellow] Start Trading Daemon\n"
+            "[bold yellow]12.[/bold yellow] Stop Trading Daemon\n"
+            "[bold yellow]13.[/bold yellow] Trading Daemon Status\n"
             "[bold yellow]0.[/bold yellow] Exit\n"
         )
         menu_panel = Panel.fit(menu_text, title="[bold red]Main Menu[/bold red]", border_style="blue")
@@ -238,6 +239,16 @@ class CLI:
                 order = self.trade_manager.sell(symbol, qty, order_type, time_in_force)
             if order:
                 self.console.print(f"[green]Order submitted:[/green]\n{order}")
+                trade_details = {
+                    "symbol": symbol,
+                    "qty": qty,
+                    "side": side,
+                    "order_type": order_type,
+                    "time_in_force": time_in_force,
+                }
+                from transaction_logger import log_transaction
+                log_transaction(trade_details, order)
+                self.console.print("[cyan]Trade logged to transactions.log[/cyan]")
             else:
                 self.console.print("[red]Order submission failed.[/red]")
         except Exception as e:
@@ -256,6 +267,35 @@ class CLI:
                                        f"Status: [yellow]{order.status}[/yellow]")
         except Exception as e:
             self.console.print(f"[red]Error retrieving open orders: {e}[/red]")
+
+    def view_order_history(self):
+        """Display recent order history from ``transactions.log``."""
+        try:
+            from transaction_logger import read_transactions
+
+            entries = read_transactions()
+            if not entries:
+                self.console.print("[red]No order history found.[/red]")
+                return
+            table = Table(title="Order History", style="bold blue")
+            table.add_column("Time", justify="center")
+            table.add_column("Symbol")
+            table.add_column("Side")
+            table.add_column("Qty", justify="right")
+            table.add_column("Status")
+            for entry in entries:
+                details = entry.get("trade_details", {})
+                order = entry.get("order", {})
+                table.add_row(
+                    entry.get("timestamp", "N/A"),
+                    str(details.get("symbol", order.get("symbol", "N/A"))),
+                    str(details.get("side", order.get("side", "N/A"))),
+                    str(details.get("qty", order.get("qty", "N/A"))),
+                    str(order.get("status", "N/A")),
+                )
+            self.console.print(table)
+        except Exception as e:
+            self.console.print(f"[red]Error reading order history: {e}[/red]")
 
     def view_positions(self):
         """
@@ -391,7 +431,10 @@ class CLI:
     def run(self):
         while True:
             self.print_menu()
-            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"])
+            choice = Prompt.ask(
+                "Select an option",
+                choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"],
+            )
             if choice == "1":
                 self.view_account_info()
             elif choice == "2":
@@ -401,20 +444,22 @@ class CLI:
             elif choice == "4":
                 self.view_open_orders()
             elif choice == "5":
-                self.manage_watchlist_menu()
+                self.view_order_history()
             elif choice == "6":
-                self.get_trading_advice()
+                self.manage_watchlist_menu()
             elif choice == "7":
-                self.run_trading_bot()
+                self.get_trading_advice()
             elif choice == "8":
-                self.launch_watchlist_view()
+                self.run_trading_bot()
             elif choice == "9":
-                self.run_options_trading_session()
+                self.launch_watchlist_view()
             elif choice == "10":
-                self.start_daemon()
+                self.run_options_trading_session()
             elif choice == "11":
-                self.stop_daemon()
+                self.start_daemon()
             elif choice == "12":
+                self.stop_daemon()
+            elif choice == "13":
                 self.daemon_status()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
