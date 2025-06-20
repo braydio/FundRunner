@@ -26,6 +26,11 @@ when micro mode is enabled (defaults to `$100`).  This mode automatically
 increases trade allocation limits so the bot can purchase at least one share
 when funds allow.
 
+## Market Data Feed
+
+Set `ALPACA_DATA_FEED` in your `.env` to control which Alpaca market data feed
+is used. Free accounts should use `iex`; paid subscriptions may specify `sip`.
+
 ## Trading Daemon
 
 A lightweight asynchronous service located in `services/trading_daemon.py` exposes Flask endpoints for controlling trading bots at runtime. Start it with `python services/trading_daemon.py` and interact via `/status`, `/pause`, `/resume`, `/mode`, and `/order` endpoints.
