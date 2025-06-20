@@ -3,7 +3,7 @@
 
 import alpaca_trade_api as tradeapi
 from alpaca_trade_api.rest import TimeFrame
-from config import API_KEY, API_SECRET, BASE_URL
+from config import API_KEY, API_SECRET, BASE_URL, DATA_FEED
 import logging
 import requests
 
@@ -25,13 +25,22 @@ if not logger.hasHandlers():
 
 
 class AlpacaClient:
-    def __init__(self):
+    def __init__(self, data_feed: str = DATA_FEED):
+        """Initialize the Alpaca API client.
+
+        Parameters
+        ----------
+        data_feed : str, optional
+            Market data feed to use (``"iex"`` or ``"sip"``), by default
+            configured via :data:`config.DATA_FEED`.
+        """
         logger.debug(
             "Initializing AlpacaClient with BASE_URL: %s and API_KEY: %s",
             BASE_URL,
             API_KEY,
         )
         self.api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL, api_version="v2")
+        self.data_feed = data_feed
 
     def safe_float(self, val, default=0.0):
         try:
@@ -243,8 +252,10 @@ class AlpacaClient:
             )
             raise
 
-    def get_historical_bars(self, symbol, days=30, timeframe=tradeapi.rest.TimeFrame.Day):
-        """Return historical bars for the given symbol.
+    def get_historical_bars(
+        self, symbol, days=30, timeframe=tradeapi.rest.TimeFrame.Day
+    ):
+        """Return historical bars for ``symbol`` using the configured data feed.
 
         Parameters
         ----------
@@ -259,6 +270,7 @@ class AlpacaClient:
         -------
         pandas.DataFrame | None
             DataFrame of bar data indexed by time or ``None`` if retrieval fails.
+            Uses ``self.data_feed`` when querying the Alpaca API.
         """
         from datetime import datetime, timedelta
 
@@ -267,18 +279,24 @@ class AlpacaClient:
         start = start_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         end = end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         try:
-            bars = self.api.get_bars(symbol, timeframe, start, end)
+            bars = self.api.get_bars(symbol, timeframe, start, end, feed=self.data_feed)
             return bars.df if hasattr(bars, "df") else None
         except Exception as e:
-            logger.error("Error fetching historical bars for %s: %s", symbol, e, exc_info=True)
+            logger.error(
+                "Error fetching historical bars for %s: %s", symbol, e, exc_info=True
+            )
             return None
 
     def get_latest_price(self, symbol):
-        """Return the latest trade price for ``symbol`` or ``None`` if unavailable."""
+        """Return the latest trade price for ``symbol`` or ``None``.
+
+        Uses ``self.data_feed`` when querying the Alpaca API.
+        """
         try:
-            bar = self.api.get_latest_bar(symbol)
+            bar = self.api.get_latest_bar(symbol, feed=self.data_feed)
             return float(getattr(bar, "c", None)) if bar is not None else None
         except Exception as e:
-            logger.error("Error fetching latest price for %s: %s", symbol, e, exc_info=True)
+            logger.error(
+                "Error fetching latest price for %s: %s", symbol, e, exc_info=True
+            )
             return None
-
