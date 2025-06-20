@@ -30,6 +30,7 @@ class CLI:
         print("6. RAG Agent - Ask Advisor")
         print("7. Run Trading Bot")
         print("8. Watchlist View")
+        print("13. Run ChatGPT Trading Bot")
         print("0. Exit")
 
     def manage_watchlist_menu(self):
@@ -205,6 +206,15 @@ class CLI:
         except Exception as e:
             print(f"Error running trading bot: {e}")
 
+    def run_chatgpt_trading_bot(self):
+        """Launch the ChatGPT-driven trading controller."""
+        try:
+            from chatgpt_trading_controller import run_chatgpt_controller
+
+            run_chatgpt_controller()
+        except Exception as e:
+            print(f"Error running ChatGPT trading bot: {e}")
+
     def launch_watchlist_view(self):
         try:
             from watchlist_view import main as watchlist_view_main
@@ -233,6 +243,8 @@ class CLI:
                 self.run_trading_bot()
             elif choice == "8":
                 self.launch_watchlist_view()
+            elif choice == "13":
+                self.run_chatgpt_trading_bot()
             elif choice == "0":
                 print("Exiting the app.")
                 sys.exit(0)

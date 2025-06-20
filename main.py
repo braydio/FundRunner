@@ -137,6 +137,7 @@ class CLI:
             "[bold yellow]10.[/bold yellow] Start Trading Daemon\n"
             "[bold yellow]11.[/bold yellow] Stop Trading Daemon\n"
             "[bold yellow]12.[/bold yellow] Trading Daemon Status\n"
+            "[bold yellow]13.[/bold yellow] Run ChatGPT Trading Bot\n"
             "[bold yellow]0.[/bold yellow] Exit\n"
         )
         menu_panel = Panel.fit(menu_text, title="[bold red]Main Menu[/bold red]", border_style="blue")
@@ -350,6 +351,15 @@ class CLI:
         except Exception as e:
             self.console.print(f"[red]Error running trading bot: {e}[/red]")
 
+    def run_chatgpt_trading_bot(self):
+        """Invoke the ChatGPT trading controller."""
+        try:
+            from chatgpt_trading_controller import run_chatgpt_controller
+
+            run_chatgpt_controller()
+        except Exception as e:
+            self.console.print(f"[red]Error running ChatGPT trading bot: {e}[/red]")
+
     def run_options_trading_session(self):
         try:
             from options_trading_bot import run_options_analysis
@@ -391,7 +401,7 @@ class CLI:
     def run(self):
         while True:
             self.print_menu()
-            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"])
+            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"])
             if choice == "1":
                 self.view_account_info()
             elif choice == "2":
@@ -416,6 +426,8 @@ class CLI:
                 self.stop_daemon()
             elif choice == "12":
                 self.daemon_status()
+            elif choice == "13":
+                self.run_chatgpt_trading_bot()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
                 sys.exit(0)
