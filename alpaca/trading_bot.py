@@ -1,8 +1,9 @@
 """Interactive trading bot using Alpaca for market data and order routing.
 
-This module defines :class:`TradingBot`, a Rich-powered interface that evaluates
-trades using live Alpaca data and optional LLM vetting. It coordinates account
-info retrieval, position monitoring and order execution.
+This module defines :class:`TradingBot`, which drives trading logic and
+optionally displays results via ``rich`` or ``textual`` dashboards. The bot
+evaluates trades using live Alpaca data and optional LLM vetting, coordinates
+account info retrieval, position monitoring and order execution.
 """
 
 import asyncio
@@ -20,6 +21,7 @@ from rich.layout import Layout
 from rich.panel import Panel
 
 from dashboard import Dashboard
+from dashboards.textual_dashboard import DashboardApp
 
 from alpaca.api_client import AlpacaClient
 from alpaca.portfolio_manager import PortfolioManager
@@ -44,7 +46,7 @@ class TradingBot:
     def __init__(
         self,
         auto_confirm=False,
-        vet_trade_logic=True,
+        vet_trade_logic=False,
         vetter_vendor="local",
         risk_threshold=0.6,
         allocation_limit=0.05,
@@ -55,7 +57,8 @@ class TradingBot:
 
         Args:
             auto_confirm (bool): Automatically confirm trades if ``True``.
-            vet_trade_logic (bool): Run trade logic through the LLM vetter.
+            vet_trade_logic (bool): Run trade logic through the LLM vetter. Defaults to ``False`` to avoid
+                external API usage unless explicitly enabled.
             vetter_vendor (str): Backend used for vetting.
             risk_threshold (float): Minimum probability of profit.
             allocation_limit (float): Base fraction of buying power per trade.
@@ -102,6 +105,11 @@ class TradingBot:
 
         self.console = Console()
         self.dashboard: Dashboard | None = None
+        self.dashboard_app: DashboardApp | None = None
+        self.eval_queue: asyncio.Queue | None = None
+        self.trade_queue: asyncio.Queue | None = None
+        self.portfolio_queue: asyncio.Queue | None = None
+        self.dashboard_task: asyncio.Task | None = None
 
         self.logger.info(
             "TradingBot initialized with auto_confirm=%s, vet_trade_logic=%s, risk_threshold=%.2f, allocation_limit=%.2f, notify_on_trade=%s",
@@ -129,13 +137,15 @@ class TradingBot:
         self.logger.info("Account details: %s", details)
 
     def init_summary_table(self, ticker_list):
-        if not self.dashboard:
-            return
-        table = self.dashboard.summary_table
-        table.rows.clear()
-        for ticker in ticker_list:
-            table.add_row(ticker, "-", "-", "-", "Pending")
-        self.dashboard.refresh()
+        if self.dashboard:
+            table = self.dashboard.summary_table
+            table.rows.clear()
+            for ticker in ticker_list:
+                table.add_row(ticker, "-", "-", "-", "Pending")
+            self.dashboard.refresh()
+        if self.eval_queue:
+            for ticker in ticker_list:
+                self.eval_queue.put_nowait((ticker, "-", "-", "-", "Pending"))
 
     def update_summary_row(
         self, ticker, current_price, probability, expected_net, decision
@@ -147,7 +157,7 @@ class TradingBot:
             except (ValueError, TypeError):
                 return str(val)
 
-        if not self.dashboard:
+        if not self.dashboard and not self.eval_queue:
             return
         tickers = {row["ticker"]: row for row in self.session_summary}
         tickers[ticker] = {
@@ -158,25 +168,37 @@ class TradingBot:
             "decision": decision,
         }
         self.session_summary = list(tickers.values())
-        table = self.dashboard.summary_table
-        table.rows.clear()
-        for t in sorted(tickers.keys()):
-            row = tickers[t]
-            table.add_row(
-                row["ticker"],
-                row["current_price"],
-                row["probability"],
-                row["expected_net"],
-                row["decision"],
+        if self.dashboard:
+            table = self.dashboard.summary_table
+            table.rows.clear()
+            for t in sorted(tickers.keys()):
+                row = tickers[t]
+                table.add_row(
+                    row["ticker"],
+                    row["current_price"],
+                    row["probability"],
+                    row["expected_net"],
+                    row["decision"],
+                )
+            self.dashboard.refresh()
+        if self.eval_queue:
+            self.eval_queue.put_nowait(
+                (
+                    ticker,
+                    str(current_price),
+                    safe_format(probability, "{:.2f}"),
+                    safe_format(expected_net, "{:.4f}"),
+                    decision,
+                )
             )
-        self.dashboard.refresh()
 
     def generate_portfolio_table(self):
-        if not self.dashboard:
+        if not self.dashboard and not self.portfolio_queue:
             return
         positions = self.portfolio.view_positions()
-        table = self.dashboard.portfolio_table
-        table.rows.clear()
+        if self.dashboard:
+            table = self.dashboard.portfolio_table
+            table.rows.clear()
         for pos in positions:
             symbol = str(pos.get("symbol", "N/A"))
             qty = pos.get("qty", 0)
@@ -191,19 +213,30 @@ class TradingBot:
                 avg_entry_str = "N/A"
                 current_price_str = "N/A"
                 dollar_pl_str = "N/A"
-            table.add_row(
-                symbol, str(qty), avg_entry_str, current_price_str, dollar_pl_str
-            )
-        self.dashboard.refresh()
+            if self.dashboard:
+                table.add_row(
+                    symbol, str(qty), avg_entry_str, current_price_str, dollar_pl_str
+                )
+            if self.portfolio_queue:
+                self.portfolio_queue.put_nowait(
+                    (
+                        symbol,
+                        str(qty),
+                        avg_entry_str,
+                        current_price_str,
+                        dollar_pl_str,
+                    )
+                )
+        if self.dashboard:
+            self.dashboard.refresh()
 
     def generate_trade_tracker_table(self):
-        """
-        Returns a table summarizing all tracked trade details (entry price, stop loss, profit target, ES, status).
-        """
-        if not self.dashboard:
+        """Populate trade tracker table in dashboard(s)."""
+        if not self.dashboard and not self.trade_queue:
             return
-        table = self.dashboard.trade_tracker_table
-        table.rows.clear()
+        if self.dashboard:
+            table = self.dashboard.trade_tracker_table
+            table.rows.clear()
         for trade in self.trade_tracker:
             entry = (
                 f"{trade.get('entry_price', '-'):.2f}"
@@ -226,8 +259,14 @@ class TradingBot:
                 else "-"
             )
             status = trade.get("status", "Pending")
-            table.add_row(trade["symbol"], entry, stop, target, es_val, status)
-        self.dashboard.refresh()
+            if self.dashboard:
+                table.add_row(trade["symbol"], entry, stop, target, es_val, status)
+            if self.trade_queue:
+                self.trade_queue.put_nowait(
+                    (trade["symbol"], entry, stop, target, es_val, status)
+                )
+        if self.dashboard:
+            self.dashboard.refresh()
 
     def generate_layout(self):
         """
@@ -554,18 +593,23 @@ class TradingBot:
         console.print(table)
 
     async def run(self, symbols=None):
+        """Execute the trading loop and display the textual dashboard."""
+
         self.logger.info("Trading bot started.")
         ticker_list = self.get_ticker_list(symbols)
         self.logger.info("Tickers to evaluate: %s", ticker_list)
-        self.dashboard = Dashboard(self.console)
+        self.eval_queue = asyncio.Queue()
+        self.trade_queue = asyncio.Queue()
+        self.portfolio_queue = asyncio.Queue()
+        self.dashboard_app = DashboardApp(
+            self.eval_queue, self.trade_queue, self.portfolio_queue
+        )
+        self.dashboard_task = asyncio.create_task(self.dashboard_app.run_async())
         self.generate_trade_tracker_table()
         self.generate_portfolio_table()
         self.init_summary_table(ticker_list)
 
         monitor_task = asyncio.create_task(self.monitor_positions())
-        live = self.dashboard.live
-        live.update(self.generate_layout())
-        live.start()
         try:
             for symbol in ticker_list:
                 self.logger.info("Processing %s", symbol)
@@ -603,7 +647,10 @@ class TradingBot:
         finally:
             self.logger.info("Trading bot run completed.")
             monitor_task.cancel()
-            self.dashboard.stop()
+            if self.dashboard_app:
+                await self.dashboard_app.action_quit()
+            if self.dashboard_task:
+                await self.dashboard_task
             self.print_summary()
 
     def get_chatgpt_advice(self, prompt):

@@ -13,6 +13,8 @@ This is deliberately not for runtime app logs, test outputs, or developer-writte
 
 - Any assistant using this repo should create logs here, and only here
 
+See also `../textual_dashboard.md` for information on the Textual dashboard.
+
 
 ## Structure
 
