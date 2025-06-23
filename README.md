@@ -11,7 +11,6 @@ project/
 │   └── options_integration.py
 ├── llm_integration.py
 ├── logger_config.py
-├── cli.py
 ├── main.py
 ├── backtester.py
 ├── transaction_logger.py

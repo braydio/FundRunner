@@ -7,7 +7,6 @@
 - `api_client.py`
 - `backtester.py`
 - `chatgpt_advisor.py`
-- `cli.py`
 - `config.py`
 - `gpt_api.py`
 - `live_options_api.py`

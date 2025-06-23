@@ -9,9 +9,6 @@
 - **chatgpt_advisor.py**
   - Number of functions: `7`
   - [View module](https://github.com/braydio/FundRunner/blob/main/chatgpt_advisor.py)
-- **cli.py**
-  - Number of functions: `12`
-  - [View module](https://github.com/braydio/FundRunner/blob/main/cli.py)
 - **config.py**
   - Number of functions: `0`
   - [View module](https://github.com/braydio/FundRunner/blob/main/config.py)
