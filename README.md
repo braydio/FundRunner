@@ -11,7 +11,6 @@ project/
 │   └── options_integration.py
 ├── llm_integration.py
 ├── logger_config.py
-├── cli.py
 ├── main.py
 ├── backtester.py
 ├── transaction_logger.py
@@ -25,6 +24,11 @@ simulated account balance.  `MICRO_ACCOUNT_SIZE` controls the starting cash
 when micro mode is enabled (defaults to `$100`).  This mode automatically
 increases trade allocation limits so the bot can purchase at least one share
 when funds allow.
+
+## Market Data Feed
+
+Set `ALPACA_DATA_FEED` in your `.env` to control which Alpaca market data feed
+is used. Free accounts should use `iex`; paid subscriptions may specify `sip`.
 
 ## Trading Daemon
 

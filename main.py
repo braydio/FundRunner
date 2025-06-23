@@ -239,6 +239,16 @@ class CLI:
                 order = self.trade_manager.sell(symbol, qty, order_type, time_in_force)
             if order:
                 self.console.print(f"[green]Order submitted:[/green]\n{order}")
+                trade_details = {
+                    "symbol": symbol,
+                    "qty": qty,
+                    "side": side,
+                    "order_type": order_type,
+                    "time_in_force": time_in_force,
+                }
+                from transaction_logger import log_transaction
+                log_transaction(trade_details, order)
+                self.console.print("[cyan]Trade logged to transactions.log[/cyan]")
             else:
                 self.console.print("[red]Order submission failed.[/red]")
         except Exception as e:
@@ -257,6 +267,35 @@ class CLI:
                                        f"Status: [yellow]{order.status}[/yellow]")
         except Exception as e:
             self.console.print(f"[red]Error retrieving open orders: {e}[/red]")
+
+    def view_order_history(self):
+        """Display recent order history from ``transactions.log``."""
+        try:
+            from transaction_logger import read_transactions
+
+            entries = read_transactions()
+            if not entries:
+                self.console.print("[red]No order history found.[/red]")
+                return
+            table = Table(title="Order History", style="bold blue")
+            table.add_column("Time", justify="center")
+            table.add_column("Symbol")
+            table.add_column("Side")
+            table.add_column("Qty", justify="right")
+            table.add_column("Status")
+            for entry in entries:
+                details = entry.get("trade_details", {})
+                order = entry.get("order", {})
+                table.add_row(
+                    entry.get("timestamp", "N/A"),
+                    str(details.get("symbol", order.get("symbol", "N/A"))),
+                    str(details.get("side", order.get("side", "N/A"))),
+                    str(details.get("qty", order.get("qty", "N/A"))),
+                    str(order.get("status", "N/A")),
+                )
+            self.console.print(table)
+        except Exception as e:
+            self.console.print(f"[red]Error reading order history: {e}[/red]")
 
     def view_positions(self):
         """
@@ -411,20 +450,22 @@ class CLI:
             elif choice == "4":
                 self.view_open_orders()
             elif choice == "5":
-                self.manage_watchlist_menu()
+                self.view_order_history()
             elif choice == "6":
-                self.get_trading_advice()
+                self.manage_watchlist_menu()
             elif choice == "7":
-                self.run_trading_bot()
+                self.get_trading_advice()
             elif choice == "8":
-                self.launch_watchlist_view()
+                self.run_trading_bot()
             elif choice == "9":
-                self.run_options_trading_session()
+                self.launch_watchlist_view()
             elif choice == "10":
-                self.start_daemon()
+                self.run_options_trading_session()
             elif choice == "11":
-                self.stop_daemon()
+                self.start_daemon()
             elif choice == "12":
+                self.stop_daemon()
+            elif choice == "13":
                 self.daemon_status()
             elif choice == "13":
                 self.run_chatgpt_trading_bot()
