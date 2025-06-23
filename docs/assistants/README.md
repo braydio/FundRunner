@@ -19,4 +19,11 @@ This is deliberately not for runtime app logs, test outputs, or developer-writte
 - `docs/assistants`
     - `logs/`       - repo level errors, overrides, task results
     - sessions/    - full session traces and command runs
-    - reports/      - summary repo scans and decisions 
+    - reports/      - summary repo scans and decisions
+
+## ChatGPT Trading Bot
+
+To run the automated trading loop powered by ChatGPT, select
+**"Run ChatGPT Trading Bot"** from the CLI or main menu. The bot
+collects account data, sends it to ChatGPT for decision making and
+executes the returned orders automatically.
