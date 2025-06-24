@@ -18,7 +18,8 @@ pip install -r requirements.txt
 ```python
 from alpaca.trading_bot import TradingBot
 
-bot = TradingBot(auto_confirm=True, vet_trade_logic=False)
+# LLM vetting is disabled by default; enable it by passing ``vet_trade_logic=True``.
+bot = TradingBot(auto_confirm=True)
 asyncio.run(bot.run())
 ```
 

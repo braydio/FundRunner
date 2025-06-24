@@ -46,7 +46,7 @@ class TradingBot:
     def __init__(
         self,
         auto_confirm=False,
-        vet_trade_logic=True,
+        vet_trade_logic=False,
         vetter_vendor="local",
         risk_threshold=0.6,
         allocation_limit=0.05,
@@ -57,7 +57,8 @@ class TradingBot:
 
         Args:
             auto_confirm (bool): Automatically confirm trades if ``True``.
-            vet_trade_logic (bool): Run trade logic through the LLM vetter.
+            vet_trade_logic (bool): Run trade logic through the LLM vetter. Defaults to ``False`` to avoid
+                external API usage unless explicitly enabled.
             vetter_vendor (str): Backend used for vetting.
             risk_threshold (float): Minimum probability of profit.
             allocation_limit (float): Base fraction of buying power per trade.
