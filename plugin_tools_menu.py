@@ -1,4 +1,10 @@
-# CLI hooks for plugin testing (Minimal Version)
+"""Interactive menu for testing optional plugins.
+
+This module exposes a single ``plugin_tools_menu`` function that lets the
+user interactively try out various plugin features, such as plotting
+trades, optimizing a portfolio, and performing sentiment analysis. It is
+intended primarily for manual experimentation and demonstrations.
+"""
 
 from rich.console import Console
 from rich.prompt import Prompt
@@ -13,6 +19,7 @@ console = Console()
 
 
 def plugin_tools_menu():
+    """Display an interactive console for trying out plugins."""
     while True:
         console.print("\n[bold cyan]PLUGIN TEST MENU[/bold cyan]")
         console.print("[1] Plot Trades")
