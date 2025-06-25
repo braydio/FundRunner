@@ -43,9 +43,9 @@ class AlpacaClient:
         self.data_feed = data_feed
 
     def safe_float(self, val, default=0.0):
+        """Return ``val`` converted to ``float`` or ``default`` on failure."""
+
         try:
-            account = self.api.get_account()
-            logger.debug("Account raw: %s", account._raw)
             return float(val) if val is not None else default
         except (ValueError, TypeError):
             return default
