@@ -16,6 +16,10 @@ cp .env.example .env
 edit .env with your API keys
 pytest
 ```
+Optional plugins:
+```bash
+pip install -r requirements-plugins.txt
+```
 
 ## Testing & Contribution
 - Run `pytest` after changes

@@ -17,6 +17,20 @@ project/
 ├── config.py
 ```
 
+## Setup
+
+Install core dependencies for most functionality:
+
+```bash
+bash scripts/setup.sh
+```
+
+Optional plugin features require extra packages:
+
+```bash
+pip install -r requirements-plugins.txt
+```
+
 ## Micro Mode
 
 Set `MICRO_MODE=true` in your `.env` file to run the bot assuming a small
