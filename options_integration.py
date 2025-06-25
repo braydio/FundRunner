@@ -349,18 +349,6 @@ def analyze_sentiment(ticker):
         return "neutral"
 
 
-def monte_carlo_prob_ITM(S, K, T, r, sigma, option_type, simulations=10000):
-    """
-    Estimate probability that the option finishes ITM using Monte Carlo simulation.
-    """
-    Z = np.random.normal(0, 1, simulations)
-    S_T = S * np.exp((r - 0.5 * sigma**2) * T + sigma * math.sqrt(T) * Z)
-    if option_type == "call":
-        return np.mean(S_T > K)
-    else:
-        return np.mean(S_T < K)
-
-
 def format_primary_metric(evaluation: dict, primary_key: str, other_keys: list) -> dict:
     """
     Given an evaluation dictionary and a primary metric key (e.g., 'profit_ratio'),
