@@ -1,4 +1,5 @@
-# trade_manager.py
+"""Convenience wrapper for submitting Alpaca trade orders."""
+
 from alpaca.api_client import AlpacaClient
 
 class TradeManager:

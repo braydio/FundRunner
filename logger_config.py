@@ -1,4 +1,5 @@
-# logger_config.py v1.0.0
+"""Basic logging configuration helpers."""
+
 import logging
 import sys
 

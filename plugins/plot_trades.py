@@ -1,4 +1,4 @@
-# Minimal mplfinance trade plotter
+"""Plot trade history using ``mplfinance``."""
 
 import mplfinance as mpf
 import pandas as pd

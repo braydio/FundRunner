@@ -1,4 +1,4 @@
-# Corrected FinBERT sentiment plugin using ProsusAI/finbert
+"""Sentiment analysis using the ProsusAI FinBERT model."""
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
