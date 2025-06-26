@@ -1,4 +1,10 @@
-# gpt_client.py
+"""Client utilities for querying GPT models.
+
+This module wraps OpenAI's Chat API as well as an optional locally hosted
+LLM endpoint. It also exposes a :func:`count_tokens` helper using ``tiktoken``
+so callers can track token usage.
+"""
+
 import os
 import openai
 import requests

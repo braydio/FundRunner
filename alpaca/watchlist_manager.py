@@ -1,4 +1,5 @@
-# watchlist_manager.py
+"""Helpers for managing Alpaca watchlists."""
+
 from alpaca.api_client import AlpacaClient
 
 class WatchlistManager:

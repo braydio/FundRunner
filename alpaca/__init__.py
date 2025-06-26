@@ -1,1 +1,1 @@
-# initialize this directory
+"""Alpaca API wrappers and trading utilities."""

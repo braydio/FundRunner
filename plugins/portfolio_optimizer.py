@@ -1,4 +1,4 @@
-# Minimal PyPortfolioOpt integration
+"""Optimize portfolios using ``PyPortfolioOpt``."""
 
 from pypfopt import EfficientFrontier, risk_models, expected_returns
 

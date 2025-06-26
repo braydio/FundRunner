@@ -1,5 +1,6 @@
 
-# portfolio_manager.py
+"""Simplified wrappers for viewing Alpaca portfolio information."""
+
 from alpaca.api_client import AlpacaClient
 
 class PortfolioManager:

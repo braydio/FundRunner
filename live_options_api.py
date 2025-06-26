@@ -1,4 +1,5 @@
-# live_options_api.py
+"""Helpers for retrieving live options data via Alpaca."""
+
 import requests
 import logging
 from config import BASE_URL, DATA_URL, API_KEY, API_SECRET

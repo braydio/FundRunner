@@ -1,5 +1,6 @@
 
-# llm_vetter.py
+"""Evaluate proposed trades using a large language model."""
+
 import logging
 from gpt_client import ask_gpt
 
