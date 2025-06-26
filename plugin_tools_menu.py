@@ -1,4 +1,11 @@
 # CLI hooks for plugin testing (Minimal Version)
+"""Interactive console for trying built-in plugins.
+
+This module exposes :func:`plugin_tools_menu`, which provides a simple Rich
+based menu allowing developers to experiment with the plotting, portfolio
+optimization and sentiment analysis plugins. It is intended purely for manual
+testing and demonstration purposes.
+"""
 
 from rich.console import Console
 from rich.prompt import Prompt
