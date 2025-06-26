@@ -1,14 +1,2 @@
-alpaca-trade-api
-python-dotenv
-requests
-rich
-textual
-pandas
-numpy
-transformers
-torch
-tiktoken
-openai
-PyPortfolioOpt
-mplfinance
-flask
+-r requirements-core.txt
+-r requirements-plugins.txt

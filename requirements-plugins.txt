@@ -1,0 +1,6 @@
+transformers
+torch
+tiktoken
+openai
+PyPortfolioOpt
+mplfinance

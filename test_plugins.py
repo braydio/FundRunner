@@ -1,4 +1,12 @@
 # Plugin Interfaces for FundRunner Extensions
+"""Optional plugin examples tested only when dependencies exist."""
+
+import pytest
+
+pytest.importorskip("pypfopt")
+pytest.importorskip("mplfinance")
+pytest.importorskip("transformers")
+pytest.importorskip("torch")
 
 # ----------------------------
 # 1. PyPortfolioOpt Plugin (Risk Management / Allocation)
