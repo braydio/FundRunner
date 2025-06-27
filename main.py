@@ -438,9 +438,28 @@ class CLI:
             self.console.print(f"[red]Error retrieving daemon status: {e}[/red]")
 
     def run(self):
+        """Main event loop that dispatches menu selections."""
         while True:
             self.print_menu()
-            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"])
+            choice = Prompt.ask(
+                "Select an option",
+                choices=[
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7",
+                    "8",
+                    "9",
+                    "10",
+                    "11",
+                    "12",
+                    "13",
+                ],
+            )
             if choice == "1":
                 self.view_account_info()
             elif choice == "2":
@@ -450,22 +469,20 @@ class CLI:
             elif choice == "4":
                 self.view_open_orders()
             elif choice == "5":
-                self.view_order_history()
-            elif choice == "6":
                 self.manage_watchlist_menu()
-            elif choice == "7":
+            elif choice == "6":
                 self.get_trading_advice()
-            elif choice == "8":
+            elif choice == "7":
                 self.run_trading_bot()
-            elif choice == "9":
+            elif choice == "8":
                 self.launch_watchlist_view()
-            elif choice == "10":
+            elif choice == "9":
                 self.run_options_trading_session()
-            elif choice == "11":
+            elif choice == "10":
                 self.start_daemon()
-            elif choice == "12":
+            elif choice == "11":
                 self.stop_daemon()
-            elif choice == "13":
+            elif choice == "12":
                 self.daemon_status()
             elif choice == "13":
                 self.run_chatgpt_trading_bot()
