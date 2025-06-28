@@ -111,6 +111,14 @@ class AlpacaClient:
             raise
 
     def list_positions(self):
+        """Return current open positions with key pricing fields.
+
+        The returned dictionaries contain ``symbol``, ``qty``, ``market_value``,
+        ``avg_entry_price``, ``current_price`` and ``unrealized_pl_percent``.
+        ``avg_entry_price`` and ``current_price`` allow downstream consumers to
+        compute profit/loss metrics directly.
+        """
+
         logger.debug("Listing all positions via GET /positions")
         try:
             positions = self.api.list_positions()
@@ -121,6 +129,12 @@ class AlpacaClient:
                         "symbol": pos.symbol,
                         "qty": self.safe_float(pos.qty),
                         "market_value": self.safe_float(pos.market_value),
+                        "avg_entry_price": self.safe_float(
+                            getattr(pos, "avg_entry_price", None)
+                        ),
+                        "current_price": self.safe_float(
+                            getattr(pos, "current_price", None)
+                        ),
                         "unrealized_pl_percent": self.safe_float(
                             getattr(pos, "unrealized_plpc", 0)
                         )
@@ -134,6 +148,8 @@ class AlpacaClient:
             raise
 
     def get_position(self, symbol):
+        """Return position information for ``symbol`` with pricing fields."""
+
         logger.debug("Getting position for symbol: %s", symbol)
         try:
             position = self.api.get_position(symbol)
@@ -141,6 +157,12 @@ class AlpacaClient:
                 "symbol": position.symbol,
                 "qty": self.safe_float(position.qty),
                 "market_value": self.safe_float(position.market_value),
+                "avg_entry_price": self.safe_float(
+                    getattr(position, "avg_entry_price", None)
+                ),
+                "current_price": self.safe_float(
+                    getattr(position, "current_price", None)
+                ),
                 "unrealized_pl_percent": self.safe_float(
                     getattr(position, "unrealized_plpc", 0)
                 )
