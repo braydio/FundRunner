@@ -18,7 +18,7 @@ pytest
 ```
 Optional plugins:
 ```bash
-pip install -r requirements-plugins.txt
+bash scripts/setup.sh --plugins  # or: pip install -r requirements-plugins.txt
 ```
 
 ## Testing & Contribution
