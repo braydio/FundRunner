@@ -14,6 +14,7 @@ project/
 ├── main.py
 ├── backtester.py
 ├── transaction_logger.py
+├── watchlist_view.py
 ├── config.py
 ```
 
