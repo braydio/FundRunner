@@ -20,6 +20,7 @@
 - `test_metrics_format.py`
 - `trading_bot.py`
 - `transaction_logger.py`
+- `watchlist_view.py`
 
 ## /alpaca/
 
