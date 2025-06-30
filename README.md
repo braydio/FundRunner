@@ -25,7 +25,13 @@ Install core dependencies for most functionality:
 bash scripts/setup.sh
 ```
 
-Optional plugin features require extra packages:
+To include optional plugin packages, pass `--plugins`:
+
+```bash
+bash scripts/setup.sh --plugins
+```
+
+You can also install the plugin requirements manually:
 
 ```bash
 pip install -r requirements-plugins.txt
