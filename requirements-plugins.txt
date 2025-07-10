@@ -1,6 +1,7 @@
 transformers
 torch
+# Optional plugin dependencies
 tiktoken
-openai
+openai>=1.0
 PyPortfolioOpt
 mplfinance
