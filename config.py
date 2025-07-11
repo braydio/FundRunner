@@ -44,6 +44,11 @@ SIMULATED_STARTING_CASH = float(os.getenv("SIMULATED_STARTING_CASH", "5000"))
 MICRO_MODE = os.getenv("MICRO_MODE", "false").lower() == "true"
 MICRO_ACCOUNT_SIZE = float(os.getenv("MICRO_ACCOUNT_SIZE", "100"))
 
+# Portfolio Manager mode configuration
+PORTFOLIO_MANAGER_MODE = (
+    os.getenv("PORTFOLIO_MANAGER_MODE", "false").lower() == "true"
+)
+
 if MICRO_MODE:
     # Override starting cash when running in micro mode
     SIMULATED_STARTING_CASH = MICRO_ACCOUNT_SIZE
