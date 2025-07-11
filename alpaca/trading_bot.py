@@ -52,6 +52,7 @@ class TradingBot:
         allocation_limit=0.05,
         notify_on_trade=False,
         micro_mode=MICRO_MODE,
+        confirm_timeout: float | None = 10.0,
     ):
         """Initialize the :class:`TradingBot` and its components.
 
@@ -64,6 +65,8 @@ class TradingBot:
             allocation_limit (float): Base fraction of buying power per trade.
             notify_on_trade (bool): Send email notifications when trades execute.
             micro_mode (bool): Enable small account mode with relaxed sizing.
+            confirm_timeout (float | None): Seconds to wait for user input before
+                auto-confirming a trade. ``None`` disables the timeout.
         """
         self.auto_confirm = auto_confirm
         self.vet_trade_logic = vet_trade_logic
@@ -73,6 +76,7 @@ class TradingBot:
             allocation_limit if not micro_mode else max(1.0, allocation_limit)
         )
         self.notify_on_trade = notify_on_trade
+        self.confirm_timeout = confirm_timeout
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
@@ -452,7 +456,9 @@ class TradingBot:
         self.logger.info("Trade evaluated for %s: %s", symbol, trade_details)
         return trade_details
 
-    async def confirm_trade(self, trade_details):
+    async def confirm_trade(self, trade_details, timeout: float | None = None):
+        """Prompt the user to confirm a trade with optional timeout."""
+
         if self.auto_confirm:
             self.logger.info("Auto-confirm enabled.")
             return True
@@ -460,9 +466,23 @@ class TradingBot:
         print("Proposed trade details:")
         for key, value in trade_details.items():
             print(f"{key}: {value}")
-        response = input("Confirm trade execution? (y/n): ")
+        prompt = "Confirm trade execution? (y/n): "
+        timeout = self.confirm_timeout if timeout is None else timeout
+        try:
+            if timeout is None:
+                response = await asyncio.to_thread(input, prompt)
+            else:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(input, prompt), timeout
+                )
+        except asyncio.TimeoutError:
+            self.logger.info(
+                "User input timeout after %.1f seconds, auto-confirming trade.",
+                timeout,
+            )
+            return True
         self.logger.info("User response: %s", response)
-        return response.lower() == "y"
+        return str(response).lower().startswith("y")
 
     def send_trade_notification(self, trade_details, order):
         subject = f"Trade Executed: {trade_details['symbol']}"
@@ -569,6 +589,35 @@ class TradingBot:
                     self.logger.error("Error processing position %s: %s", pos, e)
             await asyncio.sleep(60)
 
+    async def maintenance_mode(self, iterations: int = 5, delay: int = 60) -> None:
+        """Review open positions and refresh dashboard for a set period.
+
+        Args:
+            iterations: Number of loops to perform.
+            delay: Seconds to wait between loops.
+        """
+
+        self.logger.info("Entering maintenance mode for %d iterations", iterations)
+        for _ in range(iterations):
+            positions = self.portfolio.view_positions()
+            for trade in self.trade_tracker:
+                if trade.get("status") != "Executed":
+                    continue
+                symbol = trade["symbol"]
+                pos = next((p for p in positions if p.get("symbol") == symbol), None)
+                if not pos:
+                    continue
+                pl_percent = pos.get("unrealized_pl_percent", 0)
+                message = f"P/L% {pl_percent:.2f} vs forecast {trade.get('expected_net_value', 0):.4f}"
+                self.logger.info("Maintenance check %s: %s", symbol, message)
+                self.session_summary.append(
+                    {"ticker": symbol, "action": "Maint", "details": message}
+                )
+            self.generate_trade_tracker_table()
+            self.generate_portfolio_table()
+            await asyncio.sleep(delay)
+        self.logger.info("Maintenance mode completed.")
+
     @staticmethod
     def safe_float(val, default=0.0):
         try:
@@ -646,6 +695,7 @@ class TradingBot:
                 await asyncio.sleep(5)
         finally:
             self.logger.info("Trading bot run completed.")
+            await self.maintenance_mode()
             monitor_task.cancel()
             if self.dashboard_app:
                 await self.dashboard_app.action_quit()

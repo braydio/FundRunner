@@ -64,3 +64,11 @@ python plugin_tools_menu.py
 ```
 
 This menu demonstrates plotting, portfolio optimization and sentiment analysis without launching the full bot.
+
+## Maintenance Mode
+
+After each trading session, the bot automatically enters a short
+maintenance phase. During this mode it repeatedly reviews open
+positions, compares them against the original trade forecast and
+updates the textual dashboard with any notable changes. By default it
+runs for five cycles with a 60 second pause between checks.
