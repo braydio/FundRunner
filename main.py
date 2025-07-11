@@ -138,6 +138,7 @@ class CLI:
             "[bold yellow]11.[/bold yellow] Stop Trading Daemon\n"
             "[bold yellow]12.[/bold yellow] Trading Daemon Status\n"
             "[bold yellow]13.[/bold yellow] Run ChatGPT Trading Bot\n"
+            "[bold yellow]14.[/bold yellow] View Config Settings\n"
             "[bold yellow]0.[/bold yellow] Exit\n"
         )
         menu_panel = Panel.fit(menu_text, title="[bold red]Main Menu[/bold red]", border_style="blue")
@@ -437,6 +438,91 @@ class CLI:
         except Exception as e:
             self.console.print(f"[red]Error retrieving daemon status: {e}[/red]")
 
+    def view_config_menu(self) -> None:
+        """Display non-secret configuration settings."""
+        from config import (
+            BASE_URL,
+            DATA_URL,
+            DATA_FEED,
+            DEFAULT_TICKERS,
+            EXCLUDE_TICKERS,
+            DEFAULT_TICKERS_FROM_GPT,
+            USE_LOCAL_LLM,
+            LOCAL_LLM_API_URL,
+            SIMULATION_MODE,
+            SIMULATED_STARTING_CASH,
+            MICRO_MODE,
+            MICRO_ACCOUNT_SIZE,
+            PORTFOLIO_MANAGER_MODE,
+            GPT_MODEL,
+            TRADING_DAEMON_URL,
+            MAX_TRADES_PER_HOUR,
+            DAILY_STOP_LOSS,
+            DAILY_PROFIT_TARGET,
+            PRE_MARKET_START,
+            EXTENDED_HOURS_END,
+            SMTP_SERVER,
+            SMTP_PORT,
+            SMTP_USERNAME,
+            NOTIFICATION_EMAIL,
+            API_KEY,
+            API_SECRET,
+            OPENAI_API_KEY,
+            LOCAL_LLM_API_KEY,
+            SMTP_PASSWORD,
+            TRADIER_API_KEY,
+        )
+
+        table = Table(title="Current Configuration", style="bold blue")
+        table.add_column("Setting")
+        table.add_column("Value", overflow="fold")
+
+        config_items = {
+            "BASE_URL": BASE_URL,
+            "DATA_URL": DATA_URL,
+            "DATA_FEED": DATA_FEED,
+            "DEFAULT_TICKERS": DEFAULT_TICKERS,
+            "EXCLUDE_TICKERS": EXCLUDE_TICKERS,
+            "DEFAULT_TICKERS_FROM_GPT": DEFAULT_TICKERS_FROM_GPT,
+            "USE_LOCAL_LLM": USE_LOCAL_LLM,
+            "LOCAL_LLM_API_URL": LOCAL_LLM_API_URL,
+            "SIMULATION_MODE": SIMULATION_MODE,
+            "SIMULATED_STARTING_CASH": SIMULATED_STARTING_CASH,
+            "MICRO_MODE": MICRO_MODE,
+            "MICRO_ACCOUNT_SIZE": MICRO_ACCOUNT_SIZE,
+            "PORTFOLIO_MANAGER_MODE": PORTFOLIO_MANAGER_MODE,
+            "GPT_MODEL": GPT_MODEL,
+            "TRADING_DAEMON_URL": TRADING_DAEMON_URL,
+            "MAX_TRADES_PER_HOUR": MAX_TRADES_PER_HOUR,
+            "DAILY_STOP_LOSS": DAILY_STOP_LOSS,
+            "DAILY_PROFIT_TARGET": DAILY_PROFIT_TARGET,
+            "PRE_MARKET_START": PRE_MARKET_START,
+            "EXTENDED_HOURS_END": EXTENDED_HOURS_END,
+            "SMTP_SERVER": SMTP_SERVER,
+            "SMTP_PORT": SMTP_PORT,
+            "SMTP_USERNAME": SMTP_USERNAME,
+            "NOTIFICATION_EMAIL": NOTIFICATION_EMAIL,
+        }
+
+        secret_items = {
+            "ALPACA_API_KEY": API_KEY,
+            "ALPACA_API_SECRET": API_SECRET,
+            "OPENAI_API_KEY": OPENAI_API_KEY,
+            "LOCAL_LLM_API_KEY": LOCAL_LLM_API_KEY,
+            "SMTP_PASSWORD": SMTP_PASSWORD,
+            "TRADIER_API_KEY": TRADIER_API_KEY,
+        }
+
+        for key, value in config_items.items():
+            table.add_row(key, str(value))
+
+        for key, value in secret_items.items():
+            status = "SET" if value and not value.startswith("your_") else "NOT SET"
+            table.add_row(key, status)
+
+        self.console.print(table)
+        Prompt.ask("Press Enter to return", default="")
+
     def run(self):
         """Main event loop that dispatches menu selections."""
         while True:
@@ -458,6 +544,7 @@ class CLI:
                     "11",
                     "12",
                     "13",
+                    "14",
                 ],
             )
             if choice == "1":
@@ -486,6 +573,8 @@ class CLI:
                 self.daemon_status()
             elif choice == "13":
                 self.run_chatgpt_trading_bot()
+            elif choice == "14":
+                self.view_config_menu()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
                 sys.exit(0)

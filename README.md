@@ -71,3 +71,9 @@ python plugin_tools_menu.py
 ```
 
 This menu demonstrates plotting, portfolio optimization and sentiment analysis without launching the full bot.
+
+## Configuration Menu
+
+Run `python main.py` and choose option `14` to view the current environment
+configuration.  Secret keys are shown only as `SET` or `NOT SET` so you can
+verify that `.env` values loaded correctly.
