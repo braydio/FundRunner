@@ -39,6 +39,7 @@ from config import (
     SMTP_PASSWORD,
     NOTIFICATION_EMAIL,
     MICRO_MODE,
+    PORTFOLIO_MANAGER_MODE,
 )
 
 
@@ -52,6 +53,7 @@ class TradingBot:
         allocation_limit=0.05,
         notify_on_trade=False,
         micro_mode=MICRO_MODE,
+        portfolio_manager_mode=PORTFOLIO_MANAGER_MODE,
     ):
         """Initialize the :class:`TradingBot` and its components.
 
@@ -64,11 +66,13 @@ class TradingBot:
             allocation_limit (float): Base fraction of buying power per trade.
             notify_on_trade (bool): Send email notifications when trades execute.
             micro_mode (bool): Enable small account mode with relaxed sizing.
+            portfolio_manager_mode (bool): Run in passive portfolio management mode.
         """
         self.auto_confirm = auto_confirm
         self.vet_trade_logic = vet_trade_logic
         self.risk_threshold = risk_threshold
         self.micro_mode = micro_mode
+        self.portfolio_manager_mode = portfolio_manager_mode
         self.allocation_limit = (
             allocation_limit if not micro_mode else max(1.0, allocation_limit)
         )
@@ -112,12 +116,13 @@ class TradingBot:
         self.dashboard_task: asyncio.Task | None = None
 
         self.logger.info(
-            "TradingBot initialized with auto_confirm=%s, vet_trade_logic=%s, risk_threshold=%.2f, allocation_limit=%.2f, notify_on_trade=%s",
+            "TradingBot initialized with auto_confirm=%s, vet_trade_logic=%s, risk_threshold=%.2f, allocation_limit=%.2f, notify_on_trade=%s, portfolio_mode=%s",
             auto_confirm,
             vet_trade_logic,
             risk_threshold,
             allocation_limit,
             notify_on_trade,
+            portfolio_manager_mode,
         )
 
     def get_account_field(self, account, field):
@@ -569,6 +574,74 @@ class TradingBot:
                     self.logger.error("Error processing position %s: %s", pos, e)
             await asyncio.sleep(60)
 
+    def rebalance_portfolio(self):
+        """Rebalance holdings based on optimized portfolio weights."""
+        positions = self.portfolio.view_positions()
+        tickers = []
+        for pos in positions:
+            symbol = pos.get("symbol") if isinstance(pos, dict) else getattr(pos, "symbol", None)
+            if symbol:
+                tickers.append(symbol)
+        if not tickers:
+            return
+        import pandas as pd
+        from plugins import portfolio_optimizer
+
+        price_data = {}
+        for sym in tickers:
+            bars = self.client.get_historical_bars(sym, days=30)
+            if bars is not None and "close" in bars:
+                price_data[sym] = bars["close"]
+        if not price_data:
+            return
+        prices_df = pd.DataFrame(price_data)
+        weights = portfolio_optimizer.optimize_portfolio(prices_df)
+        account = self.portfolio.view_account()
+        portfolio_value = self.safe_float(account.get("portfolio_value"))
+        for sym, weight in weights.items():
+            price = self.client.get_latest_price(sym)
+            if price is None or portfolio_value == 0:
+                continue
+            target_qty = (portfolio_value * weight) / price
+            current = next((p for p in positions if (p.get("symbol") if isinstance(p, dict) else getattr(p, "symbol", None)) == sym), None)
+            current_qty = self.safe_float(current.get("qty")) if current else 0
+            diff = target_qty - current_qty
+            if diff > 1:
+                self.trader.buy(sym, int(diff))
+            elif diff < -1:
+                self.trader.sell(sym, int(abs(diff)))
+            self.logger.info("Rebalanced %s to %.2f%%", sym, weight * 100)
+
+    async def periodic_rebalance(self, interval_minutes: int = 60):
+        """Periodically rebalance the portfolio."""
+        while True:
+            self.rebalance_portfolio()
+            await asyncio.sleep(interval_minutes * 60)
+
+    async def run_portfolio_manager(self):
+        """Run in passive portfolio management mode."""
+        self.eval_queue = asyncio.Queue()
+        self.trade_queue = asyncio.Queue()
+        self.portfolio_queue = asyncio.Queue()
+        self.dashboard_app = DashboardApp(
+            self.eval_queue, self.trade_queue, self.portfolio_queue
+        )
+        self.dashboard_task = asyncio.create_task(self.dashboard_app.run_async())
+        self.generate_trade_tracker_table()
+        self.generate_portfolio_table()
+        monitor_task = asyncio.create_task(self.monitor_positions())
+        rebalance_task = asyncio.create_task(self.periodic_rebalance())
+        try:
+            while True:
+                await asyncio.sleep(60)
+        finally:
+            monitor_task.cancel()
+            rebalance_task.cancel()
+            if self.dashboard_app:
+                await self.dashboard_app.action_quit()
+            if self.dashboard_task:
+                await self.dashboard_task
+
     @staticmethod
     def safe_float(val, default=0.0):
         try:
@@ -596,6 +669,9 @@ class TradingBot:
         """Execute the trading loop and display the textual dashboard."""
 
         self.logger.info("Trading bot started.")
+        if self.portfolio_manager_mode:
+            await self.run_portfolio_manager()
+            return
         ticker_list = self.get_ticker_list(symbols)
         self.logger.info("Tickers to evaluate: %s", ticker_list)
         self.eval_queue = asyncio.Queue()
