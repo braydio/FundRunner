@@ -46,6 +46,13 @@ when micro mode is enabled (defaults to `$100`).  This mode automatically
 increases trade allocation limits so the bot can purchase at least one share
 when funds allow.
 
+## Portfolio Manager Mode
+
+Set `PORTFOLIO_MANAGER_MODE=true` to run the bot in a passive mode that focuses
+on monitoring account risk and rebalancing the overall portfolio. In this mode
+the bot only adjusts positions periodically based on portfolio analysis instead
+of evaluating individual trades.
+
 ## Market Data Feed
 
 Set `ALPACA_DATA_FEED` in your `.env` to control which Alpaca market data feed
@@ -64,3 +71,9 @@ python plugin_tools_menu.py
 ```
 
 This menu demonstrates plotting, portfolio optimization and sentiment analysis without launching the full bot.
+
+## Configuration Menu
+
+Run `python main.py` and choose option `14` to view the current environment
+configuration.  Secret keys are shown only as `SET` or `NOT SET` so you can
+verify that `.env` values loaded correctly.
