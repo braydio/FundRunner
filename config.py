@@ -44,6 +44,11 @@ SIMULATED_STARTING_CASH = float(os.getenv("SIMULATED_STARTING_CASH", "5000"))
 MICRO_MODE = os.getenv("MICRO_MODE", "false").lower() == "true"
 MICRO_ACCOUNT_SIZE = float(os.getenv("MICRO_ACCOUNT_SIZE", "100"))
 
+# Portfolio Manager mode configuration
+PORTFOLIO_MANAGER_MODE = (
+    os.getenv("PORTFOLIO_MANAGER_MODE", "false").lower() == "true"
+)
+
 if MICRO_MODE:
     # Override starting cash when running in micro mode
     SIMULATED_STARTING_CASH = MICRO_ACCOUNT_SIZE
@@ -55,7 +60,7 @@ GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4o-mini")
 TRADIER_API_KEY = os.getenv("TRADIER_API_KEY", "your_tradier_api_key_here")
 
 # Base URL for the optional trading daemon API
-TRADING_DAEMON_URL = os.getenv("TRADING_DAEMON_URL", "http://127.0.0.1:5055")
+TRADING_DAEMON_URL = os.getenv("TRADING_DAEMON_URL", "http://127.0.0.1:8000")
 
 # Trading daemon limits
 MAX_TRADES_PER_HOUR = int(os.getenv("MAX_TRADES_PER_HOUR", "10"))

@@ -23,6 +23,7 @@ _bot_thread: Optional[threading.Thread] = None
 _bot_loop: Optional[asyncio.AbstractEventLoop] = None
 _bot_running = False
 _current_mode = MICRO_MODE
+_portfolio_mode = False
 
 
 def _run_bot(tickers: Optional[list[str]] = None) -> None:
@@ -30,7 +31,7 @@ def _run_bot(tickers: Optional[list[str]] = None) -> None:
     global _bot_loop, _bot_running
     _bot_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(_bot_loop)
-    bot = TradingBot(micro_mode=_current_mode)
+    bot = TradingBot(micro_mode=_current_mode, portfolio_manager_mode=_portfolio_mode)
     _bot_loop.run_until_complete(bot.run(tickers))
     _bot_running = False
 
@@ -62,19 +63,27 @@ def stop():
 @app.route("/status", methods=["GET"])
 def status():
     """Return current running status."""
-    return jsonify({"running": _bot_running, "mode": "micro" if _current_mode else "standard"})
+    mode = "portfolio" if _portfolio_mode else ("micro" if _current_mode else "standard")
+    return jsonify({"running": _bot_running, "mode": mode})
 
 
 @app.route("/mode", methods=["POST"])
 def set_mode():
     """Switch trading mode ("micro" or "standard")."""
-    global _current_mode
+    global _current_mode, _portfolio_mode
     mode = (request.json or {}).get("mode")
-    if isinstance(mode, str) and mode.lower() == "micro":
-        _current_mode = True
-    elif isinstance(mode, str) and mode.lower() == "standard":
-        _current_mode = False
-    return jsonify({"mode": "micro" if _current_mode else "standard"})
+    if isinstance(mode, str):
+        mode = mode.lower()
+        if mode == "micro":
+            _current_mode = True
+            _portfolio_mode = False
+        elif mode == "standard":
+            _current_mode = False
+            _portfolio_mode = False
+        elif mode == "portfolio":
+            _portfolio_mode = True
+    current = "portfolio" if _portfolio_mode else ("micro" if _current_mode else "standard")
+    return jsonify({"mode": current})
 
 
 @app.route("/order", methods=["POST"])
