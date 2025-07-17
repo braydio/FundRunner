@@ -12,15 +12,12 @@
 - **config.py**
   - Number of functions: `0`
   - [View module](https://github.com/braydio/FundRunner/blob/main/config.py)
-- **gpt_api.py**
-  - Number of functions: `6`
-  - [View module](https://github.com/braydio/FundRunner/blob/main/gpt_api.py)
-- **live_options_api.py**
-  - Number of functions: `1`
-  - [View module](https://github.com/braydio/FundRunner/blob/main/live_options_api.py)
-- **llm_integration.py**
-  - Number of functions: `8`
-  - [View module](https://github.com/braydio/FundRunner/blob/main/llm_integration.py)
+  - **gpt_client.py**
+    - Number of functions: `3`
+    - [View module](https://github.com/braydio/FundRunner/blob/main/gpt_client.py)
+  - **live_options_api.py**
+    - Number of functions: `1`
+    - [View module](https://github.com/braydio/FundRunner/blob/main/live_options_api.py)
 - **logger_config.py**
   - Number of functions: `1`
   - [View module](https://github.com/braydio/FundRunner/blob/main/logger_config.py)

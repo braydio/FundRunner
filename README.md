@@ -9,7 +9,7 @@ project/
 ├── options/
 │   ├── __init__.py
 │   └── options_integration.py
-├── llm_integration.py
+├── gpt_client.py
 ├── logger_config.py
 ├── main.py
 ├── backtester.py
