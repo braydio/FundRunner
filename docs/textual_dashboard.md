@@ -2,8 +2,9 @@
 
 The `DashboardApp` in `dashboards/textual_dashboard.py` provides a simple
 [TUI](https://github.com/Textualize/textual) interface showing three tables:
-trade evaluations, the trade tracker and the current portfolio. The app runs as
-an asynchronous task and receives row data via three `asyncio.Queue` objects.
+trade evaluations, the trade tracker and the current portfolio. An optional
+log panel displays calculation details. The app runs as an asynchronous task
+and receives row data via queue objects.
 
 ## Setup
 
