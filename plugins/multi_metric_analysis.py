@@ -86,3 +86,69 @@ def analyze_symbol_options_sentiment(
     Returns dict of per-metric and aggregate LLM analyses.
     """
     return analyze_option_metrics(symbol, metrics, context)
+
+
+def get_metrics_for_multi_analysis(symbol, expiry, strike, option_type="call"):
+    """
+    Get option metrics for a symbol, expiry, and strike from Alpaca.
+    Returns a dictionary with the metrics needed for the LLM plugin.
+    """
+    # Fetch option chain for the symbol/expiry
+    # Note: Alpaca's SDK supports fetch_option_chain(), but you may need to use their REST endpoint directly for full metrics
+    # Here is an example using the SDK; adjust fields as needed for your Alpaca API version
+
+    # Get all options for the symbol at a certain expiry
+    try:
+        chain = alpaca.get_option_chain(symbol, expiry=expiry)
+    except Exception as e:
+        print(f"Error fetching option chain: {e}")
+        return {}
+
+    # Filter for the specific strike/option type
+    options = [
+        o
+        for o in chain
+        if float(o.strike_price) == float(strike)
+        and o.option_type.lower() == option_type.lower()
+    ]
+    if not options:
+        print(f"No options found for {symbol} {expiry} {strike} {option_type}")
+        return {}
+
+    opt = options[0]
+
+    # Calculate put/call ratio (across all strikes, same expiry)
+    puts = [o for o in chain if o.option_type == "put"]
+    calls = [o for o in chain if o.option_type == "call"]
+    put_volume = sum(float(o.volume or 0) for o in puts)
+    call_volume = sum(float(o.volume or 0) for o in calls)
+    put_call_ratio = (put_volume / call_volume) if call_volume else 0
+
+    # Example placeholder values for metrics that may need additional logic
+    iv_rank = float(opt.implied_volatility or 0)
+    iv_percentile = float(
+        opt.implied_volatility or 0
+    )  # Replace with actual percentile logic
+    max_pain = (
+        None  # You'd need to calculate this from the chain, or skip if not needed now
+    )
+    unusual_activity_score = None  # Placeholder, see note below
+    skew = None  # Placeholder
+    gamma_exposure = None  # Placeholder
+    largest_trade_size = float(
+        opt.open_interest or 0
+    )  # Best available unless you track trades
+
+    metrics = {
+        "open_interest": float(opt.open_interest or 0),
+        "volume": float(opt.volume or 0),
+        "put_call_ratio": put_call_ratio,
+        "iv_rank": iv_rank,
+        "iv_percentile": iv_percentile,
+        "max_pain": max_pain,
+        "unusual_activity_score": unusual_activity_score,
+        "skew": skew,
+        "gamma_exposure": gamma_exposure,
+        "largest_trade_size": largest_trade_size,
+    }
+    return metrics

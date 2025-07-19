@@ -16,6 +16,8 @@ from options_integration import (
     evaluate_options_for_multiple_tickers,
     analyze_sentiment,
 )
+from plugins.multi_metric_analysis import analyze_symbol_options_sentiment
+from live_options_api import get_live_options_chain
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -26,6 +28,44 @@ async def monitor_options_positions():
     while True:
         # Placeholder for monitoring open options positions
         await asyncio.sleep(60)
+
+
+def get_metrics_for_multi_analysis(symbol, expiry, strike, option_type="call"):
+    chain_data = get_live_options_chain(symbol, expiration=expiry)
+    if not chain_data or "results" not in chain_data or not chain_data["results"]:
+        print(f"No chain data found for {symbol} {expiry}")
+        return {}
+
+    contracts = [
+        c
+        for c in chain_data["results"]
+        if float(c["strike_price"]) == float(strike)
+        and c["option_type"].lower() == option_type.lower()
+    ]
+    if not contracts:
+        print(f"No matching contract for {symbol} {expiry} {strike} {option_type}")
+        return {}
+
+    opt = contracts[0]
+    puts = [c for c in chain_data["results"] if c["option_type"] == "put"]
+    calls = [c for c in chain_data["results"] if c["option_type"] == "call"]
+    put_volume = sum(float(c.get("volume") or 0) for c in puts)
+    call_volume = sum(float(c.get("volume") or 0) for c in calls)
+    put_call_ratio = (put_volume / call_volume) if call_volume else 0
+
+    metrics = {
+        "open_interest": float(opt.get("open_interest") or 0),
+        "volume": float(opt.get("volume") or 0),
+        "put_call_ratio": put_call_ratio,
+        "iv_rank": float(opt.get("implied_volatility") or 0),
+        "iv_percentile": float(opt.get("implied_volatility") or 0),
+        "max_pain": None,
+        "unusual_activity_score": None,
+        "skew": None,
+        "gamma_exposure": None,
+        "largest_trade_size": float(opt.get("open_interest") or 0),
+    }
+    return metrics
 
 
 async def run_options_analysis():
@@ -46,15 +86,66 @@ async def run_options_analysis():
         default="",
     )
 
-    # Determine sentiment from recent activity for each ticker and prompt for override
-    sentiments = {}
+    sentiments = {}  # <-- Initialize this before the loop!
+
     for ticker in tickers:
         default_sent = analyze_sentiment(ticker)
-        override = Prompt.ask(
-            f"Default sentiment for {ticker} is {default_sent}. Override? (bullish/bearish/neutral)",
-            default=default_sent,
+
+        # Prompt for strike and option type (or compute ATM)
+        strike = Prompt.ask(
+            f"Enter strike price for {ticker} (or leave blank for ATM)", default=""
         )
+        if not strike:
+            chain_data = get_live_options_chain(ticker, expiration=expiry)
+            if not chain_data or not chain_data.get("results"):
+                print(f"Error getting chain for {ticker}")
+                continue
+            # Just pick ATM from calls
+            try:
+                from live_options_api import get_latest_stock_price
+
+                underlying = get_latest_stock_price(ticker)
+                prices = [
+                    float(c["strike_price"])
+                    for c in chain_data["results"]
+                    if c["option_type"] == "call"
+                ]
+                strike = min(prices, key=lambda x: abs(x - underlying))
+            except Exception as e:
+                print(f"Error determining ATM strike: {e}")
+                continue
+
+        option_type = Prompt.ask(
+            f"Option type for {ticker}?", choices=["call", "put"], default="call"
+        )
+
+        sentiment_source = Prompt.ask(
+            f"How do you want to determine sentiment for {ticker}?",
+            choices=["default", "llm_plugin"],
+            default="default",
+        )
+
+        if sentiment_source == "llm_plugin":
+            options_metrics = get_metrics_for_multi_analysis(
+                ticker, expiry, strike, option_type
+            )
+            context = {"symbol": ticker, "date": expiry}
+            llm_result = analyze_symbol_options_sentiment(
+                ticker, options_metrics, context
+            )
+            override = llm_result["aggregate"]["sentiment"]
+            print(
+                f"[LLM Plugin] Sentiment for {ticker}: {override} ({llm_result['aggregate']['summary']})"
+            )
+        else:
+            override = Prompt.ask(
+                f"Default sentiment for {ticker} is {default_sent}. Override? (bullish/bearish/neutral)",
+                default=default_sent,
+            )
+
         sentiments[ticker] = override.lower()
+
+    # Continue with your trade style logic, evaluation, etc...
 
     # Prompt for options trade style
     console.print("Select options trade style:")
