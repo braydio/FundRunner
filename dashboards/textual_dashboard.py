@@ -3,8 +3,7 @@
 This module defines :class:`DashboardApp`, an asynchronous application built
 with textual. It shows three tables for trade evaluations, the trade tracker,
 and the portfolio. Data is pushed into async queues that the app consumes to
-update the widgets. A calculation log pane displays messages below the
-evaluation table.
+update the widgets. A calculation log pane displays messages below the tables.
 """
 
 from __future__ import annotations
@@ -76,13 +75,15 @@ class DashboardApp(App):
             "Current Price",
             "P/L$",
         )
-        eval_column = Vertical(self.eval_table, self.calc_log)
         tables = Horizontal(
-            eval_column,
+            self.eval_table,
             self.trade_table,
             self.portfolio_table,
         )
-        yield tables
+        yield Vertical(
+            tables,
+            self.calc_log,
+        )
 
     async def on_mount(self) -> None:
         self.set_interval(0.1, self._poll_queues)
