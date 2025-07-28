@@ -2,6 +2,7 @@
 .env
 paper.env
 cash.env
+*/__pycache__
 __pycache__/*
 alpaca/__pycache__/*
 plugins/__pycache__/*

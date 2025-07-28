@@ -9,7 +9,7 @@ project/
 ├── options/
 │   ├── __init__.py
 │   └── options_integration.py
-├── llm_integration.py
+├── gpt_client.py
 ├── logger_config.py
 ├── main.py
 ├── backtester.py
@@ -46,6 +46,13 @@ when micro mode is enabled (defaults to `$100`).  This mode automatically
 increases trade allocation limits so the bot can purchase at least one share
 when funds allow.
 
+## Portfolio Manager Mode
+
+Set `PORTFOLIO_MANAGER_MODE=true` to run the bot in a passive mode that focuses
+on monitoring account risk and rebalancing the overall portfolio. In this mode
+the bot only adjusts positions periodically based on portfolio analysis instead
+of evaluating individual trades.
+
 ## Market Data Feed
 
 Set `ALPACA_DATA_FEED` in your `.env` to control which Alpaca market data feed
@@ -53,7 +60,7 @@ is used. Free accounts should use `iex`; paid subscriptions may specify `sip`.
 
 ## Trading Daemon
 
-A lightweight asynchronous service located in `services/trading_daemon.py` exposes Flask endpoints for controlling trading bots at runtime. Start it with `python services/trading_daemon.py` and interact via `/status`, `/pause`, `/resume`, `/mode`, and `/order` endpoints.
+A lightweight asynchronous service located in `services/trading_daemon.py` exposes Flask endpoints for controlling trading bots at runtime. Start it with `python services/trading_daemon.py` and interact via `/status`, `/pause`, `/resume`, `/mode`, and `/order` endpoints. Use `curl` or another HTTP client to issue commands; the old `daemon_cli.py` helper has been removed.
 
 ## Plugin Tools Menu
 
@@ -72,3 +79,9 @@ maintenance phase. During this mode it repeatedly reviews open
 positions, compares them against the original trade forecast and
 updates the textual dashboard with any notable changes. By default it
 runs for five cycles with a 60 second pause between checks.
+
+## Configuration Menu
+
+Run `python main.py` and choose option `14` to view the current environment
+configuration.  Secret keys are shown only as `SET` or `NOT SET` so you can
+verify that `.env` values loaded correctly.

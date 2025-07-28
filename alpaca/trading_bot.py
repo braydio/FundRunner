@@ -39,6 +39,7 @@ from config import (
     SMTP_PASSWORD,
     NOTIFICATION_EMAIL,
     MICRO_MODE,
+    PORTFOLIO_MANAGER_MODE,
 )
 
 
@@ -53,6 +54,7 @@ class TradingBot:
         notify_on_trade=False,
         micro_mode=MICRO_MODE,
         confirm_timeout: float | None = 10.0,
+        portfolio_manager_mode=PORTFOLIO_MANAGER_MODE,
     ):
         """Initialize the :class:`TradingBot` and its components.
 
@@ -67,11 +69,13 @@ class TradingBot:
             micro_mode (bool): Enable small account mode with relaxed sizing.
             confirm_timeout (float | None): Seconds to wait for user input before
                 auto-confirming a trade. ``None`` disables the timeout.
+            portfolio_manager_mode (bool): Run in passive portfolio management mode.
         """
         self.auto_confirm = auto_confirm
         self.vet_trade_logic = vet_trade_logic
         self.risk_threshold = risk_threshold
         self.micro_mode = micro_mode
+        self.portfolio_manager_mode = portfolio_manager_mode
         self.allocation_limit = (
             allocation_limit if not micro_mode else max(1.0, allocation_limit)
         )
@@ -113,15 +117,18 @@ class TradingBot:
         self.eval_queue: asyncio.Queue | None = None
         self.trade_queue: asyncio.Queue | None = None
         self.portfolio_queue: asyncio.Queue | None = None
+        self.calc_queue: asyncio.Queue | None = None
+        self.summary_row_keys: dict[str, str] = {}
         self.dashboard_task: asyncio.Task | None = None
 
         self.logger.info(
-            "TradingBot initialized with auto_confirm=%s, vet_trade_logic=%s, risk_threshold=%.2f, allocation_limit=%.2f, notify_on_trade=%s",
+            "TradingBot initialized with auto_confirm=%s, vet_trade_logic=%s, risk_threshold=%.2f, allocation_limit=%.2f, notify_on_trade=%s, portfolio_mode=%s",
             auto_confirm,
             vet_trade_logic,
             risk_threshold,
             allocation_limit,
             notify_on_trade,
+            portfolio_manager_mode,
         )
 
     def get_account_field(self, account, field):
@@ -140,6 +147,13 @@ class TradingBot:
         }
         self.logger.info("Account details: %s", details)
 
+    def log_calc(self, message: str) -> None:
+        """Log a calculation step and enqueue it for the dashboard."""
+
+        self.logger.info(message)
+        if self.calc_queue:
+            self.calc_queue.put_nowait(message)
+
     def init_summary_table(self, ticker_list):
         if self.dashboard:
             table = self.dashboard.summary_table
@@ -147,7 +161,13 @@ class TradingBot:
             for ticker in ticker_list:
                 table.add_row(ticker, "-", "-", "-", "Pending")
             self.dashboard.refresh()
-        if self.eval_queue:
+        if self.dashboard_app:
+            for ticker in ticker_list:
+                key = self.dashboard_app.eval_table.add_row(
+                    ticker, "-", "-", "-", "Pending", key=ticker
+                )
+                self.summary_row_keys[ticker] = key
+        if self.eval_queue and not self.dashboard_app:
             for ticker in ticker_list:
                 self.eval_queue.put_nowait((ticker, "-", "-", "-", "Pending"))
 
@@ -185,16 +205,14 @@ class TradingBot:
                     row["decision"],
                 )
             self.dashboard.refresh()
-        if self.eval_queue:
-            self.eval_queue.put_nowait(
-                (
-                    ticker,
-                    str(current_price),
-                    safe_format(probability, "{:.2f}"),
-                    safe_format(expected_net, "{:.4f}"),
-                    decision,
-                )
-            )
+        if self.dashboard_app and ticker in self.summary_row_keys:
+            row_key = self.summary_row_keys[ticker]
+            table = self.dashboard_app.eval_table
+            cols = list(table.columns.keys())
+            table.update_cell(row_key, cols[1], str(current_price))
+            table.update_cell(row_key, cols[2], safe_format(probability, "{:.2f}"))
+            table.update_cell(row_key, cols[3], safe_format(expected_net, "{:.4f}"))
+            table.update_cell(row_key, cols[4], decision)
 
     def generate_portfolio_table(self):
         if not self.dashboard and not self.portfolio_queue:
@@ -330,34 +348,35 @@ class TradingBot:
         self.logger.info("Final ticker list from config: %s", final_list)
         return final_list
 
-    def evaluate_trade(self, symbol):
+    async def evaluate_trade(self, symbol):
         """Evaluate whether to trade ``symbol`` and return order details."""
 
-        self.logger.info("Evaluating trade for %s", symbol)
+        self.log_calc(f"Evaluating trade for {symbol}")
         adjusted_allocation, adjusted_risk_threshold = (
             self.risk_manager.adjust_parameters(symbol)
         )
-        self.logger.info(
-            "Adjusted allocation: %.4f, Adjusted risk threshold: %.4f",
-            adjusted_allocation,
-            adjusted_risk_threshold,
+        self.log_calc(
+            f"Adjusted allocation: {adjusted_allocation:.4f}, risk threshold: {adjusted_risk_threshold:.4f}"
         )
+        await asyncio.sleep(1)
         try:
             account = self.portfolio.view_account()
             self._log_account_details(account)
+            self.log_calc("Fetched account information")
         except Exception as e:
             self.logger.error("Could not fetch account details for %s: %s", symbol, e)
             return None
         try:
             buying_power = self.get_account_field(account, "buying_power")
-            self.logger.info(
-                "Buying power: %s",
-                (
+            self.log_calc(
+                "Buying power: "
+                + (
                     f"{buying_power:.2f}"
                     if isinstance(buying_power, (float, int))
                     else "N/A"
-                ),
+                )
             )
+            await asyncio.sleep(1)
             if buying_power is None:
                 self.logger.error("Buying power is None, skipping trade evaluation.")
                 return None
@@ -403,6 +422,10 @@ class TradingBot:
                 expected_net_value,
                 es_metric if es_metric is not None else -999,
             )
+            self.log_calc(
+                f"Metrics -> P: {probability_of_profit:.2f}, Net: {expected_net_value:.4f}"
+            )
+            await asyncio.sleep(1)
         except Exception as e:
             self.logger.error("Error computing metrics for %s: %s", symbol, e)
             probability_of_profit = 0.55
@@ -432,6 +455,8 @@ class TradingBot:
             else:
                 self.logger.info("Insufficient buying power for %s", symbol)
                 return None
+        self.log_calc(f"Alloc {max_allocation:.2f} -> qty {qty} at {current_price:.2f}")
+        await asyncio.sleep(1)
         # Set stop loss and profit target values
         stop_loss = current_price * 0.95
         profit_target = current_price * 1.10
@@ -453,6 +478,7 @@ class TradingBot:
         trade_tracker_entry = trade_details.copy()
         trade_tracker_entry["status"] = "Pending"
         self.trade_tracker.append(trade_tracker_entry)
+        self.log_calc("Trade evaluation complete")
         self.logger.info("Trade evaluated for %s: %s", symbol, trade_details)
         return trade_details
 
@@ -617,6 +643,94 @@ class TradingBot:
             self.generate_portfolio_table()
             await asyncio.sleep(delay)
         self.logger.info("Maintenance mode completed.")
+        
+    def rebalance_portfolio(self):
+        """Rebalance holdings based on optimized portfolio weights."""
+        positions = self.portfolio.view_positions()
+        tickers = []
+        for pos in positions:
+            symbol = (
+                pos.get("symbol")
+                if isinstance(pos, dict)
+                else getattr(pos, "symbol", None)
+            )
+            if symbol:
+                tickers.append(symbol)
+        if not tickers:
+            return
+        import pandas as pd
+        from plugins import portfolio_optimizer
+
+        price_data = {}
+        for sym in tickers:
+            bars = self.client.get_historical_bars(sym, days=30)
+            if bars is not None and "close" in bars:
+                price_data[sym] = bars["close"]
+        if not price_data:
+            return
+        prices_df = pd.DataFrame(price_data)
+        weights = portfolio_optimizer.optimize_portfolio(prices_df)
+        account = self.portfolio.view_account()
+        portfolio_value = self.safe_float(account.get("portfolio_value"))
+        for sym, weight in weights.items():
+            price = self.client.get_latest_price(sym)
+            if price is None or portfolio_value == 0:
+                continue
+            target_qty = (portfolio_value * weight) / price
+            current = next(
+                (
+                    p
+                    for p in positions
+                    if (
+                        p.get("symbol")
+                        if isinstance(p, dict)
+                        else getattr(p, "symbol", None)
+                    )
+                    == sym
+                ),
+                None,
+            )
+            current_qty = self.safe_float(current.get("qty")) if current else 0
+            diff = target_qty - current_qty
+            if diff > 1:
+                self.trader.buy(sym, int(diff))
+            elif diff < -1:
+                self.trader.sell(sym, int(abs(diff)))
+            self.logger.info("Rebalanced %s to %.2f%%", sym, weight * 100)
+
+    async def periodic_rebalance(self, interval_minutes: int = 60):
+        """Periodically rebalance the portfolio."""
+        while True:
+            self.rebalance_portfolio()
+            await asyncio.sleep(interval_minutes * 60)
+
+    async def run_portfolio_manager(self):
+        """Run in passive portfolio management mode."""
+        self.eval_queue = asyncio.Queue()
+        self.trade_queue = asyncio.Queue()
+        self.portfolio_queue = asyncio.Queue()
+        self.calc_queue = asyncio.Queue()
+        self.dashboard_app = DashboardApp(
+            self.eval_queue,
+            self.trade_queue,
+            self.portfolio_queue,
+            calc_queue=self.calc_queue,
+        )
+        self.dashboard_task = asyncio.create_task(self.dashboard_app.run_async())
+        self.generate_trade_tracker_table()
+        self.generate_portfolio_table()
+        monitor_task = asyncio.create_task(self.monitor_positions())
+        rebalance_task = asyncio.create_task(self.periodic_rebalance())
+        try:
+            while True:
+                await asyncio.sleep(60)
+        finally:
+            monitor_task.cancel()
+            rebalance_task.cancel()
+            if self.dashboard_app:
+                await self.dashboard_app.action_quit()
+            if self.dashboard_task:
+                await self.dashboard_task
 
     @staticmethod
     def safe_float(val, default=0.0):
@@ -645,13 +759,20 @@ class TradingBot:
         """Execute the trading loop and display the textual dashboard."""
 
         self.logger.info("Trading bot started.")
+        if self.portfolio_manager_mode:
+            await self.run_portfolio_manager()
+            return
         ticker_list = self.get_ticker_list(symbols)
         self.logger.info("Tickers to evaluate: %s", ticker_list)
         self.eval_queue = asyncio.Queue()
         self.trade_queue = asyncio.Queue()
         self.portfolio_queue = asyncio.Queue()
+        self.calc_queue = asyncio.Queue()
         self.dashboard_app = DashboardApp(
-            self.eval_queue, self.trade_queue, self.portfolio_queue
+            self.eval_queue,
+            self.trade_queue,
+            self.portfolio_queue,
+            calc_queue=self.calc_queue,
         )
         self.dashboard_task = asyncio.create_task(self.dashboard_app.run_async())
         self.generate_trade_tracker_table()
@@ -662,7 +783,7 @@ class TradingBot:
         try:
             for symbol in ticker_list:
                 self.logger.info("Processing %s", symbol)
-                trade_details = self.evaluate_trade(symbol)
+                trade_details = await self.evaluate_trade(symbol)
                 if trade_details:
                     decision = ""
                     if self.vet_trade_logic:
