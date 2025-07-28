@@ -1,10 +1,10 @@
 """Textual dashboard application for interactive trading data display.
 
-This module defines :class:`DashboardApp`, an asynchronous application built with
-textual. It shows three tables for trade evaluations, the trade tracker, and the
-portfolio. Data is pushed into async queues that the app consumes to update the
-widgets. Optionally a calculation log pane can display lines from an additional
-queue.
+This module defines :class:`DashboardApp`, an asynchronous application built
+with textual. It shows three tables for trade evaluations, the trade tracker,
+and the portfolio. Data is pushed into async queues that the app consumes to
+update the widgets. A calculation log pane displays messages below the
+evaluation table.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ try:  # Textual 0.4
 except ImportError:  # pragma: no cover - fallback for earlier versions
     from textual.widgets import Log as TextLog
 
-from textual.widgets import DataTable, Static
+from textual.widgets import DataTable
 
 
 class DashboardApp(App):
@@ -76,15 +76,13 @@ class DashboardApp(App):
             "Current Price",
             "P/L$",
         )
+        eval_column = Vertical(self.eval_table, self.calc_log)
         tables = Horizontal(
-            self.eval_table,
+            eval_column,
             self.trade_table,
             self.portfolio_table,
         )
-        yield Vertical(
-            tables,
-            self.calc_log,
-        )
+        yield tables
 
     async def on_mount(self) -> None:
         self.set_interval(0.1, self._poll_queues)
