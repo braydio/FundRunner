@@ -3,6 +3,8 @@
 This daemon provides a lightweight HTTP interface for controlling the
 `TradingBot`. It runs a Flask server on the URL defined by
 `TRADING_DAEMON_URL` in `config.py` (defaults to `http://127.0.0.1:8000`).
+The deprecated ``daemon_cli.py`` script has been removed—use ``curl`` or
+another HTTP client to interact with the daemon.
 
 ## Endpoints
 

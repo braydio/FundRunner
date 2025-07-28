@@ -60,7 +60,7 @@ is used. Free accounts should use `iex`; paid subscriptions may specify `sip`.
 
 ## Trading Daemon
 
-A lightweight asynchronous service located in `services/trading_daemon.py` exposes Flask endpoints for controlling trading bots at runtime. Start it with `python services/trading_daemon.py` and interact via `/status`, `/pause`, `/resume`, `/mode`, and `/order` endpoints.
+A lightweight asynchronous service located in `services/trading_daemon.py` exposes Flask endpoints for controlling trading bots at runtime. Start it with `python services/trading_daemon.py` and interact via `/status`, `/pause`, `/resume`, `/mode`, and `/order` endpoints. Use `curl` or another HTTP client to issue commands; the old `daemon_cli.py` helper has been removed.
 
 ## Plugin Tools Menu
 
