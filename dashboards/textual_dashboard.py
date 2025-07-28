@@ -3,7 +3,8 @@
 This module defines :class:`DashboardApp`, an asynchronous application built with
 textual. It shows three tables for trade evaluations, the trade tracker, and the
 portfolio. Data is pushed into async queues that the app consumes to update the
-widgets.
+widgets. Optionally a calculation log pane can display lines from an additional
+queue.
 """
 
 from __future__ import annotations
@@ -12,7 +13,13 @@ import asyncio
 from typing import Iterable
 
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
+
+try:  # Textual 0.4
+    from textual.widgets import TextLog
+except ImportError:  # pragma: no cover - fallback for earlier versions
+    from textual.widgets import Log as TextLog
+
 from textual.widgets import DataTable, Static
 
 
@@ -21,7 +28,10 @@ class DashboardApp(App):
 
     CSS = """
     Screen {
-        layout: horizontal;
+        layout: vertical;
+    }
+    TextLog {
+        height: 10;
     }
     """
 
@@ -30,15 +40,18 @@ class DashboardApp(App):
         eval_queue: asyncio.Queue[Iterable[str]],
         trade_queue: asyncio.Queue[Iterable[str]],
         portfolio_queue: asyncio.Queue[Iterable[str]],
+        calc_queue: asyncio.Queue[str] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.eval_queue = eval_queue
         self.trade_queue = trade_queue
         self.portfolio_queue = portfolio_queue
+        self.calc_queue = calc_queue
         self.eval_table = DataTable(zebra_stripes=True)
         self.trade_table = DataTable(zebra_stripes=True)
         self.portfolio_table = DataTable(zebra_stripes=True)
+        self.calc_log = TextLog()
 
     def compose(self) -> ComposeResult:
         self.eval_table.add_columns(
@@ -63,10 +76,14 @@ class DashboardApp(App):
             "Current Price",
             "P/L$",
         )
-        yield Horizontal(
+        tables = Horizontal(
             self.eval_table,
             self.trade_table,
             self.portfolio_table,
+        )
+        yield Vertical(
+            tables,
+            self.calc_log,
         )
 
     async def on_mount(self) -> None:
@@ -82,4 +99,7 @@ class DashboardApp(App):
         while not self.portfolio_queue.empty():
             row = await self.portfolio_queue.get()
             self.portfolio_table.add_row(*[str(x) for x in row])
-
+        if self.calc_queue is not None:
+            while not self.calc_queue.empty():
+                line = await self.calc_queue.get()
+                self.calc_log.write_line(str(line))

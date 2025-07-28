@@ -3,6 +3,12 @@
 
 set -e
 
+# support optional plugin installation with `--plugins`
+INSTALL_PLUGINS=false
+if [[ "$1" == "--plugins" ]]; then
+  INSTALL_PLUGINS=true
+fi
+
 echo "[*] Creating virtual environment..."
 python -m venv .venv
 source .venv/bin/activate
@@ -10,8 +16,10 @@ source .venv/bin/activate
 echo "[*] Installing core dependencies..."
 pip install --upgrade pip
 pip install -r requirements-core.txt
-# Optional plugin dependencies
-# pip install -r requirements-plugins.txt
+if [ "$INSTALL_PLUGINS" = true ]; then
+  echo "[*] Installing plugin dependencies..."
+  pip install -r requirements-plugins.txt
+fi
 
 if [ ! -f .env ]; then
   echo "[*] Creating .env from example..."

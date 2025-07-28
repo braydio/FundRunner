@@ -19,6 +19,7 @@ This daemon provides a lightweight HTTP interface for controlling the
 The daemon respects the standard settings in `config.py`. Of note:
 
 - `MICRO_MODE` — initial trading mode when the daemon starts.
+- `PORTFOLIO_MANAGER_MODE` — enables passive portfolio management.
 - `DEFAULT_TICKERS` and `EXCLUDE_TICKERS` — symbols evaluated by the bot.
 
 These values can be overridden via environment variables before starting
@@ -37,6 +38,13 @@ Switch to micro mode via HTTP:
 ```bash
 curl -X POST $TRADING_DAEMON_URL/mode -H 'Content-Type: application/json' \
      -d '{"mode": "micro"}'
+```
+
+Switch to portfolio manager mode via HTTP:
+
+```bash
+curl -X POST $TRADING_DAEMON_URL/mode -H 'Content-Type: application/json' \
+     -d '{"mode": "portfolio"}'
 ```
 
 Submit a market order:

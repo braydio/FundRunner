@@ -9,11 +9,12 @@ project/
 ├── options/
 │   ├── __init__.py
 │   └── options_integration.py
-├── llm_integration.py
+├── gpt_client.py
 ├── logger_config.py
 ├── main.py
 ├── backtester.py
 ├── transaction_logger.py
+├── watchlist_view.py
 ├── config.py
 ```
 
@@ -25,7 +26,13 @@ Install core dependencies for most functionality:
 bash scripts/setup.sh
 ```
 
-Optional plugin features require extra packages:
+To include optional plugin packages, pass `--plugins`:
+
+```bash
+bash scripts/setup.sh --plugins
+```
+
+You can also install the plugin requirements manually:
 
 ```bash
 pip install -r requirements-plugins.txt
@@ -38,6 +45,13 @@ simulated account balance.  `MICRO_ACCOUNT_SIZE` controls the starting cash
 when micro mode is enabled (defaults to `$100`).  This mode automatically
 increases trade allocation limits so the bot can purchase at least one share
 when funds allow.
+
+## Portfolio Manager Mode
+
+Set `PORTFOLIO_MANAGER_MODE=true` to run the bot in a passive mode that focuses
+on monitoring account risk and rebalancing the overall portfolio. In this mode
+the bot only adjusts positions periodically based on portfolio analysis instead
+of evaluating individual trades.
 
 ## Market Data Feed
 
@@ -57,3 +71,9 @@ python plugin_tools_menu.py
 ```
 
 This menu demonstrates plotting, portfolio optimization and sentiment analysis without launching the full bot.
+
+## Configuration Menu
+
+Run `python main.py` and choose option `14` to view the current environment
+configuration.  Secret keys are shown only as `SET` or `NOT SET` so you can
+verify that `.env` values loaded correctly.

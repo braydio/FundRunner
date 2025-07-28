@@ -8,9 +8,8 @@
 - `backtester.py`
 - `chatgpt_advisor.py`
 - `config.py`
-- `gpt_api.py`
+- `gpt_client.py`
 - `live_options_api.py`
-- `llm_integration.py`
 - `logger_config.py`
 - `main.py`
 - `options_integration.py`
@@ -20,6 +19,7 @@
 - `test_metrics_format.py`
 - `trading_bot.py`
 - `transaction_logger.py`
+- `watchlist_view.py`
 
 ## /alpaca/
 
