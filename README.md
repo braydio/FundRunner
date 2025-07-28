@@ -9,7 +9,7 @@ project/
 ├── options/
 │   ├── __init__.py
 │   └── options_integration.py
-├── llm_integration.py
+├── gpt_client.py
 ├── logger_config.py
 ├── main.py
 ├── backtester.py
@@ -41,10 +41,17 @@ pip install -r requirements-plugins.txt
 ## Micro Mode
 
 Set `MICRO_MODE=true` in your `.env` file to run the bot assuming a small
-simulated account balance.  `MICRO_ACCOUNT_SIZE` controls the starting cash
-when micro mode is enabled (defaults to `$100`).  This mode automatically
+simulated account balance. `MICRO_ACCOUNT_SIZE` controls the starting cash
+when micro mode is enabled (defaults to `$100`). This mode automatically
 increases trade allocation limits so the bot can purchase at least one share
 when funds allow.
+
+## Portfolio Manager Mode
+
+Set `PORTFOLIO_MANAGER_MODE=true` to run the bot in a passive mode that focuses
+on monitoring account risk and rebalancing the overall portfolio. In this mode
+the bot only adjusts positions periodically based on portfolio analysis instead
+of evaluating individual trades.
 
 ## Market Data Feed
 
@@ -71,4 +78,11 @@ After each trading session, the bot automatically enters a short
 maintenance phase. During this mode it repeatedly reviews open
 positions, compares them against the original trade forecast and
 updates the textual dashboard with any notable changes. By default it
-runs for five cycles with a 60 second pause between checks.
+runs for five cycles with a 60 second pause between checks
+=======
+
+## Configuration Menu
+
+Run `python main.py` and choose option `14` to view the current environment
+configuration. Secret keys are shown only as `SET` or `NOT SET` so you can
+verify that `.env` values loaded correctly.
