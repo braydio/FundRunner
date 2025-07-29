@@ -18,7 +18,7 @@ def test_update_summary_row_does_not_add_rows():
     )
 
     async def _run():
-        async with bot.dashboard_app.run_test() as pilot:
+        async with bot.dashboard_app.run_test():
             bot.init_summary_table(["AAPL"])
             await asyncio.sleep(0.1)
             assert bot.dashboard_app.eval_table.row_count == 1
@@ -31,5 +31,13 @@ def test_update_summary_row_does_not_add_rows():
                 bot.summary_row_keys["AAPL"], col_key
             )
             assert str(cell) == "Buy"
+            # Update again to ensure row replacement not addition
+            bot.update_summary_row("AAPL", "101", "0.7", "0.2", "Hold")
+            await asyncio.sleep(0.1)
+            assert bot.dashboard_app.eval_table.row_count == before
+            cell = bot.dashboard_app.eval_table.get_cell(
+                bot.summary_row_keys["AAPL"], col_key
+            )
+            assert str(cell) == "Hold"
 
     asyncio.run(_run())
