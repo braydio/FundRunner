@@ -174,6 +174,12 @@ class TradingBot:
     def update_summary_row(
         self, ticker, current_price, probability, expected_net, decision
     ):
+        """Update an existing row in the evaluation summary tables.
+
+        If ``ticker`` doesn't exist yet in the textual dashboard table, a new
+        row is inserted and its key cached for future updates.
+        """
+
         # Helper to safely format values
         def safe_format(val, fmt):
             try:
@@ -205,14 +211,25 @@ class TradingBot:
                     row["decision"],
                 )
             self.dashboard.refresh()
-        if self.dashboard_app and ticker in self.summary_row_keys:
-            row_key = self.summary_row_keys[ticker]
+        if self.dashboard_app:
             table = self.dashboard_app.eval_table
-            cols = list(table.columns.keys())
-            table.update_cell(row_key, cols[1], str(current_price))
-            table.update_cell(row_key, cols[2], safe_format(probability, "{:.2f}"))
-            table.update_cell(row_key, cols[3], safe_format(expected_net, "{:.4f}"))
-            table.update_cell(row_key, cols[4], decision)
+            if ticker not in self.summary_row_keys:
+                row_key = table.add_row(
+                    ticker,
+                    str(current_price),
+                    safe_format(probability, "{:.2f}"),
+                    safe_format(expected_net, "{:.4f}"),
+                    decision,
+                    key=ticker,
+                )
+                self.summary_row_keys[ticker] = row_key
+            else:
+                row_key = self.summary_row_keys[ticker]
+                cols = list(table.columns.keys())
+                table.update_cell(row_key, cols[1], str(current_price))
+                table.update_cell(row_key, cols[2], safe_format(probability, "{:.2f}"))
+                table.update_cell(row_key, cols[3], safe_format(expected_net, "{:.4f}"))
+                table.update_cell(row_key, cols[4], decision)
 
     def generate_portfolio_table(self):
         if not self.dashboard and not self.portfolio_queue:
@@ -363,6 +380,7 @@ class TradingBot:
             account = self.portfolio.view_account()
             self._log_account_details(account)
             self.log_calc("Fetched account information")
+            await asyncio.sleep(1)
         except Exception as e:
             self.logger.error("Could not fetch account details for %s: %s", symbol, e)
             return None
