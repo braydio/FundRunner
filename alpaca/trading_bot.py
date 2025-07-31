@@ -29,6 +29,7 @@ from alpaca.trade_manager import TradeManager
 from alpaca.chatgpt_advisor import get_account_overview
 from alpaca.llm_vetter import LLMVetter
 from alpaca.risk_manager import RiskManager
+from alpaca.yield_farming import YieldFarmer
 from config import (
     DEFAULT_TICKERS,
     EXCLUDE_TICKERS,
@@ -108,6 +109,7 @@ class TradingBot:
             base_allocation_limit=self.allocation_limit,
             base_risk_threshold=risk_threshold,
         )
+        self.yield_farmer = YieldFarmer(self.client)
         self.session_summary = []  # List of dicts with evaluation/execution info
         self.trade_tracker = []  # New: list to track detailed trade info
 
@@ -772,6 +774,51 @@ class TradingBot:
                 details if details else pl,
             )
         console.print(table)
+
+    async def run_yield_farming_mode(
+        self,
+        allocation_percent: float = 0.5,
+        mode: str = "lending",
+        symbols: list[str] | None = None,
+        active: bool = False,
+    ) -> list[dict[str, float]]:
+        """Execute automated yield-farming strategies.
+
+        Parameters
+        ----------
+        allocation_percent:
+            Fraction of available cash to allocate.
+        mode:
+            ``"lending"`` for stock lending rates or ``"dividend"`` for dividend
+            yields.
+        symbols:
+            Optional list of tickers used for dividend strategies.
+        active:
+            When ``True`` and ``mode='dividend'`` the stock with the nearest
+            ex-dividend date is purchased exclusively.
+        """
+        if mode not in {"lending", "dividend"}:
+            raise ValueError("mode must be 'lending' or 'dividend'")
+
+        self.logger.info(
+            "Running yield farming: mode=%s allocation=%.2f", mode, allocation_percent
+        )
+        if mode == "lending":
+            portfolio = self.yield_farmer.build_lending_portfolio(
+                allocation_percent=allocation_percent
+            )
+        else:
+            if not symbols:
+                symbols = self.get_ticker_list()
+            portfolio = self.yield_farmer.build_dividend_portfolio(
+                symbols,
+                allocation_percent=allocation_percent,
+                active=active,
+            )
+        for pick in portfolio:
+            if pick.get("qty", 0) > 0:
+                self.trader.buy(pick["symbol"], pick["qty"])
+        return portfolio
 
     async def run(self, symbols=None):
         """Execute the trading loop and display the textual dashboard."""
