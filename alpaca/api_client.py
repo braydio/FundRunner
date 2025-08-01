@@ -199,7 +199,7 @@ class AlpacaClient:
     def list_watchlists(self):
         logger.debug("Listing all watchlists")
         try:
-            watchlists = self.api.list_watchlists()
+            watchlists = self.api.get_watchlists()
             logger.debug("Watchlists retrieved: %s", watchlists)
             return watchlists
         except Exception as e:
