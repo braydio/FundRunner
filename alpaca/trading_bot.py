@@ -30,6 +30,7 @@ from alpaca.chatgpt_advisor import get_account_overview
 from alpaca.llm_vetter import LLMVetter
 from alpaca.risk_manager import RiskManager
 from alpaca.yield_farming import YieldFarmer
+from alpaca.gamma_scalper import GammaScalper
 from config import (
     DEFAULT_TICKERS,
     EXCLUDE_TICKERS,
@@ -110,6 +111,7 @@ class TradingBot:
             base_risk_threshold=risk_threshold,
         )
         self.yield_farmer = YieldFarmer(self.client)
+        self.gamma_scalper = GammaScalper(self.portfolio, self.trader)
         self.session_summary = []  # List of dicts with evaluation/execution info
         self.trade_tracker = []  # New: list to track detailed trade info
 
@@ -819,6 +821,29 @@ class TradingBot:
             if pick.get("qty", 0) > 0:
                 self.trader.buy(pick["symbol"], pick["qty"])
         return portfolio
+
+    async def run_gamma_scalping_mode(
+        self, symbol: str, target_delta: float = 0.0, threshold: float = 0.1
+    ) -> list[dict[str, float]]:
+        """Execute a basic gamma scalping hedge for ``symbol``.
+
+        Parameters
+        ----------
+        symbol:
+            Underlying ticker to hedge with shares.
+        target_delta:
+            Desired aggregate delta of the option position.
+        threshold:
+            Amount of delta drift tolerated before hedging occurs.
+        """
+
+        self.logger.info(
+            "Running gamma scalping: symbol=%s target=%.2f threshold=%.2f",
+            symbol,
+            target_delta,
+            threshold,
+        )
+        return self.gamma_scalper.run(symbol, target_delta, threshold)
 
     async def run(self, symbols=None):
         """Execute the trading loop and display the textual dashboard."""
