@@ -143,16 +143,16 @@ class CLI:
             "[bold yellow]2.[/bold yellow] View Portfolio Positions & P/L\n"
             "[bold yellow]3.[/bold yellow] Enter a Trade (Buy/Sell)\n"
             "[bold yellow]4.[/bold yellow] View Open Orders\n"
-            "[bold yellow]5.[/bold yellow] View Order History\n"
-            "[bold yellow]6.[/bold yellow] Manage Watchlist\n"
-            "[bold yellow]7.[/bold yellow] RAG Agent - Ask Advisor\n"
-            "[bold yellow]8.[/bold yellow] Run Trading Bot\n"
-            "[bold yellow]9.[/bold yellow] Watchlist View\n"
-            "[bold yellow]10.[/bold yellow] Run Options Trading Evaluation Session\n"
-            "[bold yellow]11.[/bold yellow] Start Trading Daemon\n"
-            "[bold yellow]12.[/bold yellow] Stop Trading Daemon\n"
-            "[bold yellow]13.[/bold yellow] Trading Daemon Status\n"
-            "[bold yellow]14.[/bold yellow] Run ChatGPT Trading Bot\n"
+            "[bold yellow]5.[/bold yellow] Manage Watchlist\n"
+            "[bold yellow]6.[/bold yellow] RAG Agent - Ask Advisor\n"
+            "[bold yellow]7.[/bold yellow] Run Trading Bot\n"
+            "[bold yellow]8.[/bold yellow] Watchlist View\n"
+            "[bold yellow]9.[/bold yellow] Run Options Trading Evaluation Session\n"
+            "[bold yellow]10.[/bold yellow] Start Trading Daemon\n"
+            "[bold yellow]11.[/bold yellow] Stop Trading Daemon\n"
+            "[bold yellow]12.[/bold yellow] Trading Daemon Status\n"
+            "[bold yellow]13.[/bold yellow] Run ChatGPT Trading Bot\n"
+            "[bold yellow]14.[/bold yellow] Run Gamma Scalper\n"
             "[bold yellow]0.[/bold yellow] Exit\n"
         )
 
@@ -467,6 +467,15 @@ class CLI:
         except Exception as e:
             self.console.print(f"[red]Error running options trading session: {e}[/red]")
 
+    def run_gamma_scalper_session(self):
+        """Launch gamma scalper mode."""
+        try:
+            symbol = Prompt.ask("Enter symbol to gamma scalp", default="SPY")
+            bot = TradingBot()
+            asyncio.run(bot.run_gamma_scalping_mode(symbol))
+        except Exception as e:
+            self.console.print(f"[red]Error running gamma scalper: {e}[/red]")
+
     def launch_watchlist_view(self):
         try:
             from watchlist_view import main as watchlist_view_main
@@ -634,10 +643,10 @@ class CLI:
                 self.stop_daemon()
             elif choice == "12":
                 self.daemon_status()
-            elif choice == "14":
+            elif choice == "13":
                 self.run_chatgpt_trading_bot()
             elif choice == "14":
-                self.view_config_menu()
+                self.run_gamma_scalper_session()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
                 sys.exit(0)
