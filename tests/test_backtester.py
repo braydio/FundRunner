@@ -1,4 +1,4 @@
-import backtester
+import fundrunner.backtester as backtester
 
 class DummyClient:
     def get_bars(self, symbol, start_date, end_date):

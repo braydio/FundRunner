@@ -1,7 +1,7 @@
 import os
 import tempfile
 import json
-import transaction_logger
+from fundrunner.utils import transaction_logger
 
 
 def test_log_and_read_transactions(monkeypatch):

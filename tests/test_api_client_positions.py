@@ -1,4 +1,4 @@
-import alpaca.api_client as api_mod
+import fundrunner.alpaca.api_client as api_mod
 
 class DummyREST:
     def __init__(self, *args, **kwargs):

@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 
-from alpaca.yield_farming import YieldFarmer
+from fundrunner.alpaca.yield_farming import YieldFarmer
 
 
 class DummyClient:

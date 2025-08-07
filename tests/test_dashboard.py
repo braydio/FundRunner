@@ -3,7 +3,7 @@
 import pytest
 from rich.console import Console
 
-from dashboard import Dashboard
+from fundrunner.dashboards.dashboard import Dashboard
 
 
 def test_dashboard_tables_update():

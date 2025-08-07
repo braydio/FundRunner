@@ -1,7 +1,7 @@
 import pandas as pd
-from alpaca.api_client import AlpacaClient
+from fundrunner.alpaca.api_client import AlpacaClient
 from alpaca_trade_api.rest import TimeFrame
-import alpaca.api_client as api_mod
+import fundrunner.alpaca.api_client as api_mod
 
 
 class DummyREST:

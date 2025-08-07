@@ -1,5 +1,5 @@
 import json
-from chatgpt_trading_controller import run_chatgpt_controller
+from fundrunner.bots.chatgpt_trading_controller import run_chatgpt_controller
 
 class DummyPM:
     def view_account(self):
@@ -20,10 +20,10 @@ class DummyTM:
 
 def test_gpt_response_triggers_trades(monkeypatch):
     response = json.dumps({"actions": [{"action": "buy", "symbol": "MSFT", "quantity": 2}], "request": "done"})
-    monkeypatch.setattr('chatgpt_trading_controller.ask_gpt', lambda prompt: response)
-    monkeypatch.setattr('chatgpt_trading_controller.PortfolioManager', lambda: DummyPM())
+    monkeypatch.setattr('fundrunner.bots.chatgpt_trading_controller.ask_gpt', lambda prompt: response)
+    monkeypatch.setattr('fundrunner.bots.chatgpt_trading_controller.PortfolioManager', lambda: DummyPM())
     dummy = DummyTM()
-    monkeypatch.setattr('chatgpt_trading_controller.TradeManager', lambda: dummy)
+    monkeypatch.setattr('fundrunner.bots.chatgpt_trading_controller.TradeManager', lambda: dummy)
     run_chatgpt_controller(max_cycles=1)
     assert dummy.actions == [("buy", "MSFT", 2)]
 
