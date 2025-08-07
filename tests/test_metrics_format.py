@@ -1,7 +1,7 @@
 
 # test_metrics_format.py
 import logging
-from options_integration import format_primary_metric
+from fundrunner.options.options_integration import format_primary_metric
 
 # Set up logging for testing
 logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(message)s')

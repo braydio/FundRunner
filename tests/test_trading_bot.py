@@ -1,9 +1,9 @@
-"""Tests for :mod:`alpaca.trading_bot`."""
+"""Tests for :mod:`fundrunner.alpaca.trading_bot`."""
 
 import asyncio
 from unittest import mock
 
-from alpaca.trading_bot import TradingBot
+from fundrunner.alpaca.trading_bot import TradingBot
 
 
 def test_confirm_trade_timeout(monkeypatch):

@@ -1,7 +1,7 @@
 import importlib
 import os
 
-import config as config_mod
+from fundrunner.utils import config as config_mod
 
 
 def test_portfolio_manager_mode(monkeypatch):

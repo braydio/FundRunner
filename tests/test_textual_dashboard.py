@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 
-from dashboards.textual_dashboard import DashboardApp
+from fundrunner.dashboards.textual_dashboard import DashboardApp
 
 
 def test_dashboard_app_populates():

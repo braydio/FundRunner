@@ -1,4 +1,4 @@
-from services.trading_daemon import app, state
+from fundrunner.services.trading_daemon import app, state
 
 
 def test_status_endpoint():

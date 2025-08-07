@@ -1,7 +1,8 @@
 import asyncio
+import asyncio
 
-from alpaca.trading_bot import TradingBot
-from dashboards.textual_dashboard import DashboardApp
+from fundrunner.alpaca.trading_bot import TradingBot
+from fundrunner.dashboards.textual_dashboard import DashboardApp
 
 
 def test_update_summary_row_does_not_add_rows():
