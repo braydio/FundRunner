@@ -11,12 +11,18 @@ API_SECRET = os.getenv("ALPACA_API_SECRET", "your_api_secret_here")
 BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
 DATA_URL = os.getenv("ALPACA_DATA_URL", "https://data.alpaca.markets")
 DATA_FEED = os.getenv("ALPACA_DATA_FEED", "iex")
+# Alpaca news endpoint
+NEWS_API_URL = os.getenv(
+    "ALPACA_NEWS_URL", f"{DATA_URL}/v1beta1/news"
+)
 
 # OpenAI API key for ChatGPT integration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 
 # Local LLM API endpoint (for your custom local model)
-LOCAL_LLM_API_URL = os.getenv("LOCAL_LLM_API_URL", "http://localhost:5051/v1/chat")
+LOCAL_LLM_API_URL = os.getenv(
+    "LOCAL_LLM_API_URL", "http://localhost:5051/v1/chat"
+)
 LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "your_local_llm_key")
 USE_LOCAL_LLM = os.getenv("USE_LOCAL_LLM", "false").lower() == "true"
 
