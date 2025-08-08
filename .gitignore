@@ -12,3 +12,4 @@ dev/*
 *.json
 
 *.local
+__pycache__/
