@@ -49,6 +49,9 @@ PORTFOLIO_MANAGER_MODE = (
     os.getenv("PORTFOLIO_MANAGER_MODE", "false").lower() == "true"
 )
 
+# Sector weighting configuration
+SECTOR_MODE = os.getenv("SECTOR_MODE", "false").lower() == "true"
+
 if MICRO_MODE:
     # Override starting cash when running in micro mode
     SIMULATED_STARTING_CASH = MICRO_ACCOUNT_SIZE
