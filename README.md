@@ -53,6 +53,12 @@ on monitoring account risk and rebalancing the overall portfolio. In this mode
 the bot only adjusts positions periodically based on portfolio analysis instead
 of evaluating individual trades.
 
+## Gamma Scalper Mode
+
+The gamma scalper keeps an option position close to delta-neutral by hedging
+with the underlying stock when delta drifts beyond a threshold.  Launch it from
+the main menu and supply a ticker symbol to monitor.
+
 ## Market Data Feed
 
 Set `ALPACA_DATA_FEED` in your `.env` to control which Alpaca market data feed
