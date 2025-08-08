@@ -7,6 +7,7 @@ def test_status_endpoint():
     assert resp.status_code == 200
     data = resp.get_json()
     assert data['mode'] == state.mode
+    assert data['portfolio_active'] == state.portfolio_active
 
 
 def test_mode_change():
@@ -25,3 +26,11 @@ def test_pause_resume():
     assert state.paused is True
     client.post('/resume')
     assert state.paused is False
+
+
+def test_portfolio_start_stop():
+    client = app.test_client()
+    client.post('/portfolio/start')
+    assert state.portfolio_active is True
+    client.post('/portfolio/stop')
+    assert state.portfolio_active is False

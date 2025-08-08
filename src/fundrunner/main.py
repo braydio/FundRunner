@@ -152,7 +152,9 @@ class CLI:
             "[bold yellow]11.[/bold yellow] Start Trading Daemon\n"
             "[bold yellow]12.[/bold yellow] Stop Trading Daemon\n"
             "[bold yellow]13.[/bold yellow] Trading Daemon Status\n"
-            "[bold yellow]14.[/bold yellow] Run ChatGPT Trading Bot\n"
+            "[bold yellow]14.[/bold yellow] Start Portfolio Manager\n"
+            "[bold yellow]15.[/bold yellow] Stop Portfolio Manager\n"
+            "[bold yellow]16.[/bold yellow] Run ChatGPT Trading Bot\n"
             "[bold yellow]0.[/bold yellow] Exit\n"
         )
 
@@ -491,6 +493,22 @@ class CLI:
         except Exception as e:
             self.console.print(f"[red]Error stopping daemon: {e}[/red]")
 
+    def start_portfolio_manager(self):
+        """Request the daemon to start portfolio management."""
+        try:
+            r = requests.post(f"{TRADING_DAEMON_URL}/portfolio/start")
+            self.console.print(str(r.json()))
+        except Exception as e:
+            self.console.print(f"[red]Error starting portfolio manager: {e}[/red]")
+
+    def stop_portfolio_manager(self):
+        """Request the daemon to stop portfolio management."""
+        try:
+            r = requests.post(f"{TRADING_DAEMON_URL}/portfolio/stop")
+            self.console.print(str(r.json()))
+        except Exception as e:
+            self.console.print(f"[red]Error stopping portfolio manager: {e}[/red]")
+
     def daemon_status(self):
         """Display the current daemon status."""
         try:
@@ -607,6 +625,8 @@ class CLI:
                     "12",
                     "13",
                     "14",
+                    "15",
+                    "16",
                 ],
             )
 
@@ -634,9 +654,13 @@ class CLI:
                 self.stop_daemon()
             elif choice == "12":
                 self.daemon_status()
+            elif choice == "13":
+                self.start_portfolio_manager()
             elif choice == "14":
+                self.stop_portfolio_manager()
+            elif choice == "15":
                 self.run_chatgpt_trading_bot()
-            elif choice == "14":
+            elif choice == "16":
                 self.view_config_menu()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")

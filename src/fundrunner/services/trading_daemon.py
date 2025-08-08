@@ -9,6 +9,7 @@ from threading import Thread
 from flask import Flask, jsonify, request
 
 from fundrunner.alpaca.trading_bot import TradingBot
+from fundrunner.alpaca.portfolio_manager import PortfolioManager
 from fundrunner.bots.options_trading_bot import run_options_analysis
 from fundrunner.utils.config import MICRO_MODE
 
@@ -21,10 +22,13 @@ class DaemonState:
     paused: bool = False
     trade_count: int = 0
     daily_pl: float = 0.0
+    portfolio_active: bool = False
 
 
 state = DaemonState()
 app = Flask(__name__)
+portfolio = PortfolioManager()
+portfolio_task: asyncio.Task | None = None
 
 
 @app.route("/status")
@@ -66,9 +70,34 @@ def submit_order():
     return jsonify({"message": "order received", "details": details})
 
 
+@app.route("/portfolio/start", methods=["POST"])
+def start_portfolio_management():
+    """Activate background portfolio management."""
+    state.portfolio_active = True
+    return jsonify({"message": "portfolio management started"})
+
+
+@app.route("/portfolio/stop", methods=["POST"])
+def stop_portfolio_management():
+    """Stop background portfolio management."""
+    state.portfolio_active = False
+    return jsonify({"message": "portfolio management stopped"})
+
+
 async def trading_loop() -> None:
     """Main asynchronous loop calling the active trading bot."""
+    global portfolio_task
     while True:
+        if state.portfolio_active and portfolio_task is None:
+            portfolio_task = asyncio.create_task(portfolio.run_active_management())
+        elif not state.portfolio_active and portfolio_task:
+            portfolio_task.cancel()
+            try:
+                await portfolio_task
+            except asyncio.CancelledError:
+                pass
+            portfolio_task = None
+
         if not state.paused:
             if state.mode == "stock":
                 bot = TradingBot(auto_confirm=True, vet_trade_logic=False, micro_mode=MICRO_MODE)
