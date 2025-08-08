@@ -1,9 +1,5 @@
-
-# risk_manager.py
 """Utilities for adjusting risk parameters based on recent market data."""
-
 from datetime import datetime, timedelta
-
 from fundrunner.alpaca.api_client import AlpacaClient
 
 class RiskManager:

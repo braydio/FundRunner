@@ -1,6 +1,4 @@
-
 """Simplified wrappers for viewing Alpaca portfolio information."""
-
 from fundrunner.alpaca.api_client import AlpacaClient
 
 class PortfolioManager:
