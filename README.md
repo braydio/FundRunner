@@ -66,6 +66,15 @@ python plugin_tools_menu.py
 
 This menu demonstrates plotting, portfolio optimization and sentiment analysis without launching the full bot.
 
+## Notifications
+
+FundRunner can alert on trades or risk events via email and Discord. Configure
+the following environment variables in your `.env` file:
+
+- `SMTP_SERVER`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`,
+  `NOTIFICATION_EMAIL` – SMTP settings for outbound email.
+- `DISCORD_WEBHOOK_URL` – Discord webhook URL for channel alerts.
+
 ## Maintenance Mode
 
 After each trading session, the bot automatically enters a short
