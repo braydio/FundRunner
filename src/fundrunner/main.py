@@ -66,21 +66,12 @@ class CLI:
             self.console.print(f"[red]Error retrieving account info: {e}[/red]")
 
     def show_portfolio_status(self):
-        """
-        Displays the portfolio status in a table along with the current date/time in the title.
-        Also computes overall P/L from all positions.
-        """
+        """Render the portfolio dashboard with position details and overall profit/loss."""
         try:
             account = self.portfolio_manager.view_account()
             positions = self.portfolio_manager.view_positions()
-            timestamp = datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )  # <-- Get current date/time
-            table = Table(
-                title=f"Portfolio Status (as of {timestamp})",  # <-- Include timestamp in the title
-                style="bold green",
-                show_edge=True,
-            )
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            table = Table(show_edge=True, style="bold green")
             table.add_column("Symbol", justify="center", style="green")
             table.add_column("Qty", justify="right", style="cyan")
             table.add_column("Avg Entry", justify="right", style="magenta")
@@ -107,24 +98,34 @@ class CLI:
                 table.add_row(
                     symbol, str(qty), avg_entry_str, current_price_str, dollar_pl_str
                 )
-            # Append overall P/L as a separate row or print after the table
-            self.console.print(table)
-            self.console.print(
-                f"[bold red]Overall Account P/L: {overall_pl:.2f}[/bold red]"
+            panel = Panel(
+                table,
+                title=f"[bold red]Portfolio Dashboard ({timestamp})[/bold red]",
+                border_style="green",
             )
+            self.console.print(panel)
+            pl_panel = Panel.fit(
+                f"[bold red]Overall Account P/L: {overall_pl:.2f}[/bold red]",
+                border_style="red",
+            )
+            self.console.print(pl_panel)
             return {"account": account, "positions": positions}
         except Exception as e:
             self.console.print(f"[red]Error retrieving portfolio status: {e}[/red]")
             return {}
 
     def save_portfolio_snapshot(self):
+        """Persist the latest account and position data to `portfolio_snapshot.json`."""
         snapshot = {}
         try:
             account = self.portfolio_manager.view_account()
             positions = self.portfolio_manager.view_positions()
             snapshot["account"] = account
             snapshot["positions"] = positions
-            snapshot["portfolio_status"] = self.show_portfolio_status()
+            snapshot["portfolio_status"] = {
+                "account": account,
+                "positions": positions,
+            }
             with open("portfolio_snapshot.json", "w") as f:
                 json.dump(snapshot, f, indent=2)
         except Exception as e:
@@ -137,27 +138,31 @@ class CLI:
         # Save a snapshot every time the menu is rendered so that recent data is available
         self.save_portfolio_snapshot()
 
-        menu_text = (
-            "\n[bold blue]Unified Trading App[/bold blue]\n\n"
-            "[bold yellow]1.[/bold yellow] View Account Information\n"
-            "[bold yellow]2.[/bold yellow] View Portfolio Positions & P/L\n"
-            "[bold yellow]3.[/bold yellow] Enter a Trade (Buy/Sell)\n"
-            "[bold yellow]4.[/bold yellow] View Open Orders\n"
-            "[bold yellow]5.[/bold yellow] View Order History\n"
-            "[bold yellow]6.[/bold yellow] Manage Watchlist\n"
-            "[bold yellow]7.[/bold yellow] RAG Agent - Ask Advisor\n"
-            "[bold yellow]8.[/bold yellow] Run Trading Bot\n"
-            "[bold yellow]9.[/bold yellow] Watchlist View\n"
-            "[bold yellow]10.[/bold yellow] Run Options Trading Evaluation Session\n"
-            "[bold yellow]11.[/bold yellow] Start Trading Daemon\n"
-            "[bold yellow]12.[/bold yellow] Stop Trading Daemon\n"
-            "[bold yellow]13.[/bold yellow] Trading Daemon Status\n"
-            "[bold yellow]14.[/bold yellow] Run ChatGPT Trading Bot\n"
-            "[bold yellow]0.[/bold yellow] Exit\n"
+        table = Table(
+            show_edge=True,
+            header_style="bold magenta",
+            title="Unified Trading App",
         )
+        table.add_column("Option", justify="center", style="cyan", no_wrap=True)
+        table.add_column("Description", style="green")
 
-        menu_panel = Panel.fit(
-            menu_text, title="[bold red]Main Menu[/bold red]", border_style="blue"
+        options = [
+            ("1", "View Account Information"),
+            ("2", "View Portfolio Dashboard"),
+            ("3", "Enter a Trade (Buy/Sell)"),
+            ("4", "View Open Orders"),
+            ("5", "Manage Watchlist"),
+            ("6", "RAG Agent - Ask Advisor"),
+            ("7", "Run Trading Bot"),
+            ("8", "View Config"),
+            ("0", "Exit"),
+        ]
+
+        for key, desc in options:
+            table.add_row(key, desc)
+
+        menu_panel = Panel(
+            table, title="[bold red]Main Menu[/bold red]", border_style="blue"
         )
         self.console.print(menu_panel)
 
@@ -453,7 +458,9 @@ class CLI:
     def run_chatgpt_trading_bot(self):
         """Invoke the ChatGPT trading controller."""
         try:
-            from fundrunner.bots.chatgpt_trading_controller import run_chatgpt_controller
+            from fundrunner.bots.chatgpt_trading_controller import (
+                run_chatgpt_controller,
+            )
 
             run_chatgpt_controller()
         except Exception as e:
@@ -585,35 +592,23 @@ class CLI:
         Prompt.ask("Press Enter to return", default="")
 
     def run(self):
-        """Main loop that handles user selections from the menu."""
+        """Launch the dashboard and handle user selections from the menu."""
+
+        self.console.clear()
+        self.show_portfolio_status()
+        Prompt.ask("\nPress Enter to open the Main Menu", default="")
 
         while True:
             self.print_menu()
             choice = Prompt.ask(
                 "Select an option",
-                choices=[
-                    "0",
-                    "1",
-                    "2",
-                    "3",
-                    "4",
-                    "5",
-                    "6",
-                    "7",
-                    "8",
-                    "9",
-                    "10",
-                    "11",
-                    "12",
-                    "13",
-                    "14",
-                ],
+                choices=["0", "1", "2", "3", "4", "5", "6", "7", "8"],
             )
 
             if choice == "1":
                 self.view_account_info()
             elif choice == "2":
-                self.view_positions()
+                self.show_portfolio_status()
             elif choice == "3":
                 self.enter_trade()
             elif choice == "4":
@@ -625,24 +620,10 @@ class CLI:
             elif choice == "7":
                 self.run_trading_bot()
             elif choice == "8":
-                self.launch_watchlist_view()
-            elif choice == "9":
-                self.run_options_trading_session()
-            elif choice == "10":
-                self.start_daemon()
-            elif choice == "11":
-                self.stop_daemon()
-            elif choice == "12":
-                self.daemon_status()
-            elif choice == "14":
-                self.run_chatgpt_trading_bot()
-            elif choice == "14":
                 self.view_config_menu()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
                 sys.exit(0)
-            else:
-                self.console.print("[red]Invalid option. Please try again.[/red]")
             Prompt.ask("\nPress Enter to return to the Main Menu", default="")
 
 
