@@ -7,7 +7,7 @@ from typing import Sequence, List
 
 import requests
 
-from fundrunner.utils.config import API_KEY, API_SECRET, NEWS_API_URL
+from fundrunner.utils.config import API_KEY, API_SECRET, ALPACA_NEWS_URL
 
 logger = logging.getLogger(__name__)
 
@@ -36,11 +36,12 @@ def fetch_news(symbols: Sequence[str]) -> List[str]:
     }
     try:
         response = requests.get(
-            NEWS_API_URL, params=params, headers=headers, timeout=10
+            ALPACA_NEWS_URL, params=params, headers=headers, timeout=10
         )
         response.raise_for_status()
         data = response.json()
         return [item.get("headline", "") for item in data.get("news", [])]
-    except Exception as exc:  # pragma: no cover - network failure
-        logger.error(f"Failed to fetch news: {exc}")
+    except requests.RequestException as exc:  # pragma: no cover
+        # network failure or invalid response
+        logger.error("Failed to fetch news: %s", exc)
         return []

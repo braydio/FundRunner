@@ -12,7 +12,7 @@ BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
 DATA_URL = os.getenv("ALPACA_DATA_URL", "https://data.alpaca.markets")
 DATA_FEED = os.getenv("ALPACA_DATA_FEED", "iex")
 # Alpaca news endpoint
-NEWS_API_URL = os.getenv(
+ALPACA_NEWS_URL = os.getenv(
     "ALPACA_NEWS_URL", f"{DATA_URL}/v1beta1/news"
 )
 
