@@ -1,6 +1,6 @@
 import os
 import tempfile
-import json
+
 from fundrunner.utils import transaction_logger
 
 

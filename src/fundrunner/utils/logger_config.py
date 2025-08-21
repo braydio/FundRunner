@@ -3,6 +3,7 @@
 import logging
 import sys
 
+
 def setup_logging(name=__name__, level=logging.DEBUG, log_file="app.log"):
     """
     Sets up and returns a logger with a console and file handler.
@@ -22,5 +23,5 @@ def setup_logging(name=__name__, level=logging.DEBUG, log_file="app.log"):
     fh.setLevel(level)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
-    
+
     return logger

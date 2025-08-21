@@ -12,6 +12,7 @@ import datetime
 
 TRANSACTION_LOG_FILE = os.path.join(os.path.dirname(__file__), "transactions.log")
 
+
 def log_transaction(trade_details, order):
     """Append a trade execution record to ``transactions.log``.
 
@@ -51,4 +52,4 @@ def read_transactions(limit=10):
     with open(TRANSACTION_LOG_FILE, "r") as f:
         lines = f.readlines()
     lines = lines[-limit:]
-    return [json.loads(l) for l in lines]
+    return [json.loads(line) for line in lines]

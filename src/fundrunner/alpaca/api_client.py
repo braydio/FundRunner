@@ -2,10 +2,8 @@
 """Wrapper around :mod:`alpaca_trade_api` providing convenience helpers."""
 
 import alpaca_trade_api as tradeapi
-from alpaca_trade_api.rest import TimeFrame
 from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL, DATA_FEED
 import logging
-import requests
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)

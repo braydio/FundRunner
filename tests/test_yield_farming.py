@@ -1,4 +1,3 @@
-import pytest
 from datetime import datetime
 
 from fundrunner.alpaca.yield_farming import YieldFarmer

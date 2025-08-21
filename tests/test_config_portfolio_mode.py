@@ -1,5 +1,4 @@
 import importlib
-import os
 
 from fundrunner.utils import config as config_mod
 

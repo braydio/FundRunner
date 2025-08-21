@@ -32,6 +32,14 @@ You can also install the plugin requirements manually:
 pip install -r requirements-plugins.txt
 ```
 
+## Linting
+
+Run static analysis with [`flake8`](https://flake8.pycqa.org/) to check core source files:
+
+```bash
+./scripts/lint.sh
+```
+
 ## Micro Mode
 
 Set `MICRO_MODE=true` in your `.env` file to run the bot assuming a small
