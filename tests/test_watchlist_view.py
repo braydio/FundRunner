@@ -1,5 +1,5 @@
 import types
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from fundrunner.utils import watchlist_view
 
