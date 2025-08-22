@@ -134,9 +134,64 @@ A lightweight wrapper for account & position viewing.
 
 ---
 
-## Next Steps
+## Active Portfolio Manager (`portfolio_manager_active.py`)
 
-- Document `portfolio_manager_active.py` for rebalancing.
-- Add docs for `trade_manager.py` (individual trade handling).
-- Add docs for `watchlist_manager.py` and `yield_farming.py`.
-- Include advisor modules (`chatgpt_advisor.py`, `llm_vetter.py`) under plugin integrations.
+Provides utilities for **active portfolio rebalancing**.
+
+### Functions
+
+- `calculate_weights(positions)` → compute position weights by market value.
+- `parse_target_weights(spec)` → parse user strings like `"AAPL:0.6,MSFT:0.4"`.
+- `rebalance_decisions(positions, target_weights, prices)` → calculate buy/sell qty adjustments.
+
+---
+
+## Trade Manager (`trade_manager.py`)
+
+Convenience wrapper for trade execution.
+
+### Methods
+
+- `buy(symbol, qty, order_type='market', time_in_force='gtc')`
+- `sell(symbol, qty, order_type='market', time_in_force='gtc')`
+- `cancel_order(order_id)`
+- `list_open_orders()`
+
+---
+
+## Watchlist Manager (`watchlist_manager.py`)
+
+Helpers for managing watchlists.
+
+### Methods
+
+- `list_watchlists()`
+- `create_watchlist(name, symbols)`
+- `add_to_watchlist(watchlist_id, symbol)`
+- `remove_from_watchlist(watchlist_id, symbol)`
+- `get_watchlist(watchlist_id)`
+- `delete_watchlist(watchlist_id)`
+
+---
+
+## Yield Farmer (`yield_farming.py`)
+
+Implements yield-focused strategies.
+
+### Stock Lending
+
+- `fetch_lending_rates()` → return lending rates (fallback if API fails).
+- `build_lending_portfolio(allocation_percent=0.5, top_n=3)` → construct portfolio of top lending-rate stocks.
+
+### Dividend Capture
+
+- `fetch_dividend_info(symbol)` → get dividend yield & ex-date via Yahoo Finance.
+- `build_dividend_portfolio(symbols, allocation_percent=0.5, active=False)` → build portfolio based on dividend yields.
+
+---
+
+# Next Steps
+
+- Integrate yield farming into `TradingBot`.
+- Add advisor modules (`chatgpt_advisor.py`, `llm_vetter.py`) under plugin integrations.
+- Provide strategy templates (momentum, value, income).
