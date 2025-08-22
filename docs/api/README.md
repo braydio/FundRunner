@@ -1,6 +1,23 @@
-# API Notes
+# FundRunner API Documentation
 
-This directory contains references to external API endpoints used in the codebase.
+This folder contains documentation for all **external APIs** and **plugin interfaces** used in FundRunner.
 
-The Alpaca client defaults to the IEX market data feed. Set ``ALPACA_DATA_FEED``
-to ``sip`` if you have a SIP subscription and wish to access that feed.
+## Current Integrations
+
+- [Alpaca Markets API](https://alpaca.markets/docs/)
+  - Used for trading, account data, and market data feeds.
+- [Optional Plugins]
+  - Document as added.
+
+## Guidelines
+
+- Each external API used in the codebase must be documented here.
+- Add one Markdown file per API under `docs/api/` (e.g. `alpaca.md`).
+- If official docs cannot be fetched, note that in the file.
+
+---
+
+### Todo
+
+- [ ] Add `alpaca.md` with details of endpoints currently referenced in `src/fundrunner/alpaca/`.
+- [ ] Add plugin-specific docs as plugins are enabled.
