@@ -1,0 +1,3 @@
+[console_scripts]
+fundrunner = fundrunner.main:main
+fundrunner-daemon = fundrunner.services.trading_daemon:main

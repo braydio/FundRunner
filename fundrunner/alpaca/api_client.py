@@ -2,16 +2,10 @@
 """Wrapper around :mod:`alpaca_trade_api` providing convenience helpers."""
 
 import alpaca_trade_api as tradeapi
+from alpaca_trade_api.rest import TimeFrame
 from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL, DATA_FEED
-from fundrunner.utils.error_handling import (
-    handle_api_errors,
-    handle_trading_errors,
-    safe_execute,
-    FundRunnerError,
-    TradingError,
-    ErrorType
-)
 import logging
+import requests
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
@@ -56,7 +50,6 @@ class AlpacaClient:
         except (ValueError, TypeError):
             return default
 
-    @handle_api_errors
     def get_account(self):
         logger.debug("Fetching account information via GET /account")
         try:
@@ -75,7 +68,6 @@ class AlpacaClient:
             logger.error("Error fetching account information: %s", e, exc_info=True)
             raise
 
-    @handle_trading_errors
     def submit_order(self, symbol, qty, side, order_type, time_in_force):
         """Submit an order via the Alpaca REST API.
 
