@@ -82,6 +82,7 @@ exclude = [
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+pythonpath = ["src"]
 addopts = [
     "--cov=fundrunner",
     "--cov-report=term-missing",

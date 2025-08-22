@@ -12,6 +12,10 @@ project/
 └── tests/
 ```
 
+## Documentation
+
+Research and design documents are consolidated under `docs/PortfolioManager`.
+
 ## Setup
 
 Install core dependencies for most functionality:
