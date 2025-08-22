@@ -13,3 +13,10 @@ dev/*
 
 *.local
 __pycache__/
+
+# Build artifacts
+*.egg-info/
+info/
+fundrunner/
+.coverage
+htmlcov/
