@@ -1,6 +1,7 @@
 """Utilities for adjusting risk parameters based on recent market data."""
 from datetime import datetime, timedelta
 from fundrunner.alpaca.api_client import AlpacaClient
+from fundrunner.services.notifications import notify
 
 class RiskManager:
     def __init__(
@@ -68,4 +69,20 @@ class RiskManager:
         except Exception:
             # In case of any error, return the base parameters.
             return self.base_allocation_limit, self.base_risk_threshold
+
+    def check_threshold(self, name: str, value: float, limit: float) -> bool:
+        """Notify if ``value`` exceeds ``limit``.
+
+        Args:
+            name: Human readable metric name.
+            value: Current metric value.
+            limit: Threshold to compare against.
+
+        Returns:
+            bool: ``True`` if the threshold was breached.
+        """
+        if value >= limit:
+            notify("Risk Threshold Breach", f"{name}: {value} >= {limit}")
+            return True
+        return False
 

@@ -35,6 +35,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "your_email@example.com")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "your_email_password")
 NOTIFICATION_EMAIL = os.getenv("NOTIFICATION_EMAIL", "recipient@example.com")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
 
 # Simulation settings for paper account
 SIMULATION_MODE = os.getenv("SIMULATION_MODE", "False").lower() == "true"
