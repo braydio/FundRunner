@@ -12,6 +12,10 @@ project/
 └── tests/
 ```
 
+## Documentation
+
+Research and design documents are consolidated under `docs/PortfolioManager`.
+
 ## Setup
 
 Install core dependencies for most functionality:
@@ -30,6 +34,14 @@ You can also install the plugin requirements manually:
 
 ```bash
 pip install -r requirements-plugins.txt
+```
+
+## Linting
+
+Run static analysis with [`flake8`](https://flake8.pycqa.org/) to check core source files:
+
+```bash
+./scripts/lint.sh
 ```
 
 ## Micro Mode

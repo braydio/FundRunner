@@ -1,7 +1,6 @@
 """Tests for :mod:`fundrunner.alpaca.trading_bot`."""
 
 import asyncio
-from unittest import mock
 
 from fundrunner.alpaca.trading_bot import TradingBot
 

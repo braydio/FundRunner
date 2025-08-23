@@ -1,5 +1,4 @@
 import asyncio
-import pytest
 
 from fundrunner.dashboards.textual_dashboard import DashboardApp
 
@@ -12,7 +11,7 @@ def test_dashboard_app_populates():
     app = DashboardApp(eval_q, trade_q, port_q, calc_queue=calc_q)
 
     async def _run():
-        async with app.run_test() as pilot:
+        async with app.run_test():
             await eval_q.put(("AAPL", "100", "0.5", "0.1", "Pending"))
             await trade_q.put(("AAPL", "100", "95", "110", "0.1", "OPEN"))
             await port_q.put(("AAPL", "10", "99", "100", "1.0"))
