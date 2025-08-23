@@ -1,6 +1,5 @@
 """Unit tests for the :mod:`dashboard` module."""
 
-import pytest
 from rich.console import Console
 
 from fundrunner.dashboards.dashboard import Dashboard

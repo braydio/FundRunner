@@ -3,6 +3,8 @@
 
 import pytest
 
+import pytest
+
 pytest.importorskip("pypfopt")
 pytest.importorskip("mplfinance")
 pytest.importorskip("transformers")
@@ -12,7 +14,6 @@ pytest.importorskip("torch")
 # 1. PyPortfolioOpt Plugin (Risk Management / Allocation)
 # ----------------------------
 
-# requirements.txt: PyPortfolioOpt
 from pypfopt import EfficientFrontier, risk_models, expected_returns
 
 
@@ -21,7 +22,7 @@ def optimize_portfolio(prices_df):
     mu = expected_returns.mean_historical_return(prices_df)
     S = risk_models.sample_cov(prices_df)
     ef = EfficientFrontier(mu, S)
-    weights = ef.max_sharpe()
+    _ = ef.max_sharpe()
     cleaned = ef.clean_weights()
     return cleaned
 
@@ -36,7 +37,6 @@ def optimize_portfolio(prices_df):
 
 # requirements.txt: mplfinance
 import mplfinance as mpf
-import pandas as pd
 
 
 def plot_trades(df, trades=None, title="Backtest Result"):
@@ -61,7 +61,6 @@ def plot_trades(df, trades=None, title="Backtest Result"):
 try:
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
     import torch
-    import numpy as np
 
     # Load once at startup
     tokenizer = AutoTokenizer.from_pretrained("yiyanghkust/finbert-sentiment")

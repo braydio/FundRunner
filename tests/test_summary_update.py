@@ -1,6 +1,4 @@
 import asyncio
-import asyncio
-
 from fundrunner.alpaca.trading_bot import TradingBot
 from fundrunner.dashboards.textual_dashboard import DashboardApp
 

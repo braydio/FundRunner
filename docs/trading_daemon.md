@@ -10,11 +10,13 @@ another HTTP client to interact with the daemon.
 
 | Method | Path   | Description                                  |
 | ------ | ------ | -------------------------------------------- |
-| POST   | `/start` | Start the trading bot if not already running |
-| POST   | `/stop`  | Stop the running bot                         |
-| GET    | `/status` | Return JSON with `running` and current `mode` |
-| POST   | `/mode`  | Set trading mode. Body: `{"mode": "micro"}` or `{"mode": "standard"}` |
-| POST   | `/order` | Submit an order while the daemon is active. Body fields: `symbol`, `qty`, `side`, `order_type`, `time_in_force` |
+| GET    | `/status` | Return JSON with daemon state (mode, paused, trade_count, daily_pl) |
+| POST   | `/start` | Start/resume the trading loop (alias for `/resume`) |
+| POST   | `/stop`  | Stop/pause the trading loop (alias for `/pause`) |
+| POST   | `/pause` | Pause the trading loop |
+| POST   | `/resume` | Resume the trading loop |
+| POST   | `/mode`  | Set trading mode. Body: `{"mode": "stock"}` or `{"mode": "options"}` |
+| POST   | `/order` | Submit an order. Body fields: `symbol`, `qty`, `side`, `order_type`, `time_in_force` |
 
 ## Configuration
 
@@ -35,18 +37,18 @@ Start the server:
 python trading_daemon.py
 ```
 
-Switch to micro mode via HTTP:
+Switch to stock trading mode:
 
 ```bash
 curl -X POST $TRADING_DAEMON_URL/mode -H 'Content-Type: application/json' \
-     -d '{"mode": "micro"}'
+     -d '{"mode": "stock"}'
 ```
 
-Switch to portfolio manager mode via HTTP:
+Switch to options trading mode:
 
 ```bash
 curl -X POST $TRADING_DAEMON_URL/mode -H 'Content-Type: application/json' \
-     -d '{"mode": "portfolio"}'
+     -d '{"mode": "options"}'
 ```
 
 Submit a market order:

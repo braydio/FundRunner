@@ -1,5 +1,4 @@
 """Convenience wrapper for submitting Alpaca trade orders."""
-
 from fundrunner.alpaca.api_client import AlpacaClient
 
 class TradeManager:
