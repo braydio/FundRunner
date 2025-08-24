@@ -1,6 +1,6 @@
 """Optimize portfolios using ``PyPortfolioOpt``."""
 
-from pypfopt import EfficientFrontier, risk_models, expected_returns
+from pypfopt import EfficientFrontier, expected_returns, risk_models
 
 
 def optimize_portfolio(prices):

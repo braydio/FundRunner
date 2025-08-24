@@ -3,8 +3,6 @@
 
 import pytest
 
-import pytest
-
 pytest.importorskip("pypfopt")
 pytest.importorskip("mplfinance")
 pytest.importorskip("transformers")
@@ -14,7 +12,7 @@ pytest.importorskip("torch")
 # 1. PyPortfolioOpt Plugin (Risk Management / Allocation)
 # ----------------------------
 
-from pypfopt import EfficientFrontier, risk_models, expected_returns
+from pypfopt import EfficientFrontier, expected_returns, risk_models
 
 
 def optimize_portfolio(prices_df):
@@ -59,8 +57,8 @@ def plot_trades(df, trades=None, title="Backtest Result"):
 
 # requirements.txt: transformers, torch
 try:
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
     import torch
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     # Load once at startup
     tokenizer = AutoTokenizer.from_pretrained("yiyanghkust/finbert-sentiment")
@@ -77,9 +75,7 @@ def analyze_sentiment(text):
         raise RuntimeError("FinBERT model unavailable")
     inputs = tokenizer(text, return_tensors="pt", truncation=True)
     outputs = model(**inputs)
-    scores = (
-        torch.nn.functional.softmax(outputs.logits, dim=1).detach().numpy()[0]
-    )
+    scores = torch.nn.functional.softmax(outputs.logits, dim=1).detach().numpy()[0]
     return {"positive": scores[0], "neutral": scores[1], "negative": scores[2]}
 
 

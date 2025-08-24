@@ -1,4 +1,5 @@
 """Wrapper for GPT advice used by Alpaca trading tools."""
+
 from fundrunner.utils.gpt_client import ask_gpt
 
 

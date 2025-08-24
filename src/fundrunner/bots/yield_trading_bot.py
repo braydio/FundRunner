@@ -12,7 +12,7 @@ existing trading logic while offering an opt‐in path for yield strategies.
 from __future__ import annotations
 
 import asyncio
-from typing import Iterable, Optional, Dict, Any
+from typing import Any, Dict, Iterable, Optional
 
 from fundrunner.alpaca.trading_bot import TradingBot
 from fundrunner.alpaca.yield_farming import YieldFarmer, YieldFarmingMode

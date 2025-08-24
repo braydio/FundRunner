@@ -1,28 +1,34 @@
 """Interactive CLI for managing the trading bot and daemon."""
 
-import sys
 import asyncio
 import json
 import os
+import sys
 from datetime import datetime  # <-- Added import for timestamps
-from fundrunner.alpaca.trade_manager import TradeManager
-from fundrunner.alpaca.portfolio_manager import PortfolioManager
-from fundrunner.alpaca.watchlist_manager import WatchlistManager
-from fundrunner.alpaca.trading_bot import TradingBot
+
+import requests
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt
-from fundrunner.utils.config import SIMULATED_STARTING_CASH, SIMULATION_MODE, MICRO_MODE
+from rich.table import Table
+
+from fundrunner.alpaca.portfolio_manager import PortfolioManager
+from fundrunner.alpaca.trade_manager import TradeManager
+from fundrunner.alpaca.trading_bot import TradingBot
+from fundrunner.alpaca.watchlist_manager import WatchlistManager
+from fundrunner.utils.config import (
+    MICRO_MODE,
+    SIMULATED_STARTING_CASH,
+    SIMULATION_MODE,
+    TRADING_DAEMON_URL,
+)
 from fundrunner.utils.error_handling import (
-    format_user_error,
-    setup_global_error_handler,
     FundRunnerError,
     TradingError,
-    safe_execute
+    format_user_error,
+    safe_execute,
+    setup_global_error_handler,
 )
-import requests
-from fundrunner.utils.config import TRADING_DAEMON_URL
 
 
 class CLI:
@@ -69,14 +75,17 @@ class CLI:
                 border_style="green",
             )
             self.console.print(info_panel)
-            
+
         success, result = safe_execute(_view_account)
         if not success:
-            error_msg = format_user_error(result, "Failed to retrieve account information")
+            error_msg = format_user_error(
+                result, "Failed to retrieve account information"
+            )
             self.console.print(f"[red]{error_msg}[/red]")
 
     def show_portfolio_status(self):
         """Render the portfolio dashboard with position details and overall profit/loss."""
+
         def _show_portfolio():
             account = self.portfolio_manager.view_account()
             positions = self.portfolio_manager.view_positions()
@@ -120,7 +129,7 @@ class CLI:
             )
             self.console.print(pl_panel)
             return {"account": account, "positions": positions}
-            
+
         success, result = safe_execute(_show_portfolio)
         if success:
             return result
@@ -295,7 +304,7 @@ class CLI:
                 order = self.trade_manager.buy(symbol, qty, order_type, time_in_force)
             elif side == "sell":
                 order = self.trade_manager.sell(symbol, qty, order_type, time_in_force)
-            
+
             if order:
                 self.console.print(f"[green]Order submitted:[/green]\n{order}")
                 trade_details = {
@@ -312,7 +321,7 @@ class CLI:
                 return True
             else:
                 raise TradingError("Order submission returned None", "SUBMIT_FAILED")
-                
+
         success, result = safe_execute(_submit_trade)
         if not success:
             error_msg = format_user_error(result, "Failed to submit trade order")
@@ -529,36 +538,36 @@ class CLI:
     def view_config_menu(self) -> None:
         """Display non-secret configuration settings."""
         from fundrunner.utils.config import (
-            BASE_URL,
-            DATA_URL,
-            DATA_FEED,
-            DEFAULT_TICKERS,
-            EXCLUDE_TICKERS,
-            DEFAULT_TICKERS_FROM_GPT,
-            USE_LOCAL_LLM,
-            LOCAL_LLM_API_URL,
-            SIMULATION_MODE,
-            SIMULATED_STARTING_CASH,
-            MICRO_MODE,
-            MICRO_ACCOUNT_SIZE,
-            PORTFOLIO_MANAGER_MODE,
-            GPT_MODEL,
-            TRADING_DAEMON_URL,
-            MAX_TRADES_PER_HOUR,
-            DAILY_STOP_LOSS,
-            DAILY_PROFIT_TARGET,
-            PRE_MARKET_START,
-            EXTENDED_HOURS_END,
-            SMTP_SERVER,
-            SMTP_PORT,
-            SMTP_USERNAME,
-            NOTIFICATION_EMAIL,
             API_KEY,
             API_SECRET,
-            OPENAI_API_KEY,
+            BASE_URL,
+            DAILY_PROFIT_TARGET,
+            DAILY_STOP_LOSS,
+            DATA_FEED,
+            DATA_URL,
+            DEFAULT_TICKERS,
+            DEFAULT_TICKERS_FROM_GPT,
+            EXCLUDE_TICKERS,
+            EXTENDED_HOURS_END,
+            GPT_MODEL,
             LOCAL_LLM_API_KEY,
+            LOCAL_LLM_API_URL,
+            MAX_TRADES_PER_HOUR,
+            MICRO_ACCOUNT_SIZE,
+            MICRO_MODE,
+            NOTIFICATION_EMAIL,
+            OPENAI_API_KEY,
+            PORTFOLIO_MANAGER_MODE,
+            PRE_MARKET_START,
+            SIMULATED_STARTING_CASH,
+            SIMULATION_MODE,
             SMTP_PASSWORD,
+            SMTP_PORT,
+            SMTP_SERVER,
+            SMTP_USERNAME,
             TRADIER_API_KEY,
+            TRADING_DAEMON_URL,
+            USE_LOCAL_LLM,
         )
 
         table = Table(title="Current Configuration", style="bold blue")
@@ -651,7 +660,7 @@ def main():
     """Entry point for the FundRunner CLI application."""
     # Setup global error handling
     setup_global_error_handler()
-    
+
     cli = CLI()
     cli.run()
 

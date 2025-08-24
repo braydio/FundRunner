@@ -1,5 +1,7 @@
 """Helpers for managing Alpaca watchlists."""
+
 from fundrunner.alpaca.api_client import AlpacaClient
+
 
 class WatchlistManager:
     def __init__(self):

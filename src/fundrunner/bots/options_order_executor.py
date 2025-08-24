@@ -1,9 +1,11 @@
 """Utilities for placing options orders via the Alpaca API."""
 
-import requests
 import logging
-from fundrunner.utils.config import BASE_URL, API_KEY, API_SECRET
+
+import requests
+
 from fundrunner.options.live_options_api import get_live_options_chain
+from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL
 
 logger = logging.getLogger(__name__)
 

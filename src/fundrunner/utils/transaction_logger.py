@@ -1,4 +1,3 @@
-
 """Transaction logging helpers.
 
 This module provides small utilities for recording trade information to a
@@ -6,9 +5,9 @@ This module provides small utilities for recording trade information to a
 entry is stored as one JSON object per line with a UTC timestamp.
 """
 
+import datetime
 import json
 import os
-import datetime
 
 TRANSACTION_LOG_FILE = os.path.join(os.path.dirname(__file__), "transactions.log")
 

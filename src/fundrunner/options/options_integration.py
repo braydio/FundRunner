@@ -1,15 +1,18 @@
 """Options analysis utilities using Alpaca market data."""
 
-import math
 import datetime
 import logging
-import requests
+import math
+
 import numpy as np
 import pandas as pd
+import requests
+
 from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL, DATA_URL
+
 from .live_options_api import (
-    get_live_options_chain,
     get_latest_stock_price,
+    get_live_options_chain,
 )
 
 logger = logging.getLogger(__name__)

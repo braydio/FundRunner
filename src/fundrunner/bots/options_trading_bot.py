@@ -8,16 +8,18 @@ Key entrypoints include :func:`run_options_analysis` for scanning tickers and
 # options_trading_bot.py
 import asyncio
 import logging
+
 from rich.console import Console
-from rich.table import Table
 from rich.prompt import Prompt
+from rich.table import Table
+
+from fundrunner.options.live_options_api import get_live_options_chain
 from fundrunner.options.options_integration import (
+    analyze_sentiment,
     evaluate_option_strategy,
     evaluate_options_for_multiple_tickers,
-    analyze_sentiment,
 )
 from fundrunner.plugins.multi_metric_analysis import analyze_symbol_options_sentiment
-from fundrunner.options.live_options_api import get_live_options_chain
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -244,7 +246,10 @@ async def run_options_analysis():
             expiry_str = result.get("evaluated_expiry")
             strike = result.get("selected_strike")
             option_type = result.get("option_type")
-            from fundrunner.bots.options_order_executor import get_contract_symbol, place_options_order
+            from fundrunner.bots.options_order_executor import (
+                get_contract_symbol,
+                place_options_order,
+            )
 
             contract_symbol = get_contract_symbol(
                 underlying, expiry_str, strike, option_type

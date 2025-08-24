@@ -4,6 +4,7 @@
 import argparse
 import os
 import sys
+
 import chromadb
 from chromadb.errors import ChromaError
 from chromadb.utils import embedding_functions

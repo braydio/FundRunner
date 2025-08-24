@@ -1,17 +1,19 @@
 # api_client.py
 """Wrapper around :mod:`alpaca_trade_api` providing convenience helpers."""
 
+import logging
+
 import alpaca_trade_api as tradeapi
+
 from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL, DATA_FEED
 from fundrunner.utils.error_handling import (
+    ErrorType,
+    FundRunnerError,
+    TradingError,
     handle_api_errors,
     handle_trading_errors,
     safe_execute,
-    FundRunnerError,
-    TradingError,
-    ErrorType
 )
-import logging
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)

@@ -1,11 +1,12 @@
-
 """Evaluate proposed trades using a large language model."""
 
 import logging
+
 from fundrunner.utils.gpt_client import ask_gpt
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 class LLMVetter:
     def __init__(self, vendor="local"):
@@ -20,11 +21,11 @@ class LLMVetter:
     def vet_trade_logic(self, trade_details: dict, prompt: str = None) -> bool:
         """
         Sends trade logic details to an LLM for review and returns whether the trade is approved.
-        
+
         Args:
             trade_details (dict): A dictionary containing trade details.
             prompt (str, optional): A custom prompt. Defaults to a prompt that reviews the provided trade details.
-        
+
         Returns:
             bool: True if the trade is approved by the LLM, otherwise False.
         """
@@ -42,4 +43,3 @@ class LLMVetter:
         except Exception as e:
             logger.error("Error during LLM vetting: %s", e, exc_info=True)
             return False
-
