@@ -5,12 +5,14 @@ LLM endpoint. It also exposes a :func:`count_tokens` helper using ``tiktoken``
 so callers can track token usage.
 """
 
-import os
-from openai import OpenAI
-import requests
 import logging
+import os
+
+import requests
 import tiktoken
-from fundrunner.utils.config import USE_LOCAL_LLM, LOCAL_LLM_API_URL
+from openai import OpenAI
+
+from fundrunner.utils.config import LOCAL_LLM_API_URL, USE_LOCAL_LLM
 
 logger = logging.getLogger(__name__)
 api_key = os.getenv("OPENAI_API_KEY")

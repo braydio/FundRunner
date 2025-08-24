@@ -68,7 +68,7 @@ def run_chatgpt_controller(max_cycles: int = 3) -> None:
             f"Account: {account}\n"
             f"Positions: {positions}\n"
             f"Risk metrics: {metrics}\n"
-            "Respond with JSON {\"actions\": [{...}], \"request\": \"more_data\" or \"done\"}."
+            'Respond with JSON {"actions": [{...}], "request": "more_data" or "done"}.'
         )
 
         response = ask_gpt(prompt)

@@ -52,13 +52,13 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Iterable, List, Optional, Tuple
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import requests
 
 from fundrunner.alpaca.api_client import AlpacaClient
-from fundrunner.alpaca.trade_manager import TradeManager
 from fundrunner.alpaca.risk_manager import RiskManager
+from fundrunner.alpaca.trade_manager import TradeManager
 
 
 class YieldFarmingMode:
@@ -137,10 +137,14 @@ class YieldFarmer:
             results = data.get("quoteResponse", {}).get("result", [])
             return {item["symbol"]: item for item in results}
         except Exception as e:
-            self.logger.warning("Failed to fetch Yahoo Finance quote for %s: %s", symbols, e)
+            self.logger.warning(
+                "Failed to fetch Yahoo Finance quote for %s: %s", symbols, e
+            )
             return {sym: {} for sym in symbols}
 
-    def _fetch_yahoo_calendar(self, symbol: str) -> Tuple[Optional[datetime], Optional[datetime]]:
+    def _fetch_yahoo_calendar(
+        self, symbol: str
+    ) -> Tuple[Optional[datetime], Optional[datetime]]:
         """Fetch ex‐dividend and earnings dates from Yahoo Finance.
 
         The ``quoteSummary`` endpoint exposes company events such as the
@@ -157,9 +161,7 @@ class YieldFarmer:
         tuple(datetime | None, datetime | None)
             A tuple of (ex_dividend_date, earnings_date) or (None, None).
         """
-        url = (
-            f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}?modules=calendarEvents"
-        )
+        url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}?modules=calendarEvents"
         headers = {"User-Agent": self.USER_AGENT}
         try:
             resp = requests.get(url, headers=headers, timeout=10)
@@ -180,7 +182,9 @@ class YieldFarmer:
             earn_date = datetime.fromtimestamp(earn_raw) if earn_raw else None
             return ex_date, earn_date
         except Exception as e:
-            self.logger.warning("Failed to fetch Yahoo Finance calendar for %s: %s", symbol, e)
+            self.logger.warning(
+                "Failed to fetch Yahoo Finance calendar for %s: %s", symbol, e
+            )
             return None, None
 
     def get_dividend_info(self, symbols: Iterable[str]) -> Dict[str, dict]:
@@ -352,7 +356,9 @@ class YieldFarmer:
             vol_safe = vol if vol > 1e-6 else 1e-6
             scores[sym] = rate / vol_safe
         if not scores:
-            self.logger.warning("No securities meet the minimum lending rate %.3f", min_rate)
+            self.logger.warning(
+                "No securities meet the minimum lending rate %.3f", min_rate
+            )
             return {}
         # Normalise scores to weights
         total_score = sum(scores.values())
@@ -470,7 +476,9 @@ class YieldFarmer:
             for sym, info in candidates.items():
                 yield_val = info.get("dividend_yield", 0)
                 ex_date = info.get("ex_dividend_date")
-                days_until = (ex_date - now).total_seconds() / (24 * 3600) if ex_date else 365.0
+                days_until = (
+                    (ex_date - now).total_seconds() / (24 * 3600) if ex_date else 365.0
+                )
                 # Score: prefer higher yields and sooner ex dates
                 score = yield_val / (days_until + 1)
                 if score > best_score:
@@ -508,10 +516,15 @@ class YieldFarmer:
                         qty,
                         budget,
                     )
-                    self.trader.buy(selected, qty, order_type="market", time_in_force="day")
+                    self.trader.buy(
+                        selected, qty, order_type="market", time_in_force="day"
+                    )
             except Exception as e:
                 self.logger.error(
-                    "Failed to submit active dividend order for %s: %s", selected, e, exc_info=True
+                    "Failed to submit active dividend order for %s: %s",
+                    selected,
+                    e,
+                    exc_info=True,
                 )
             return summary
         # Passive dividend strategy: weight by yield / volatility
@@ -557,7 +570,9 @@ class YieldFarmer:
                     )
                     self.trader.buy(sym, qty, order_type="market", time_in_force="day")
             except Exception as e:
-                self.logger.error("Failed to submit dividend order for %s: %s", sym, e, exc_info=True)
+                self.logger.error(
+                    "Failed to submit dividend order for %s: %s", sym, e, exc_info=True
+                )
         return summary
 
     # ---------------------------------------------------------------------

@@ -5,8 +5,8 @@ Analyzes 10 different options metrics at multiple levels of granularity,
 calls the local LLM per-metric and then for the aggregate, returns detailed sentiment.
 """
 
-from typing import Dict, Any, List
 import logging
+from typing import Any, Dict, List
 
 # Example: These could be passed in from fundrunner.options.options_integration or api_client
 OPTION_METRICS = [

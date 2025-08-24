@@ -1,7 +1,10 @@
 """Utilities for adjusting risk parameters based on recent market data."""
+
 from datetime import datetime, timedelta
+
 from fundrunner.alpaca.api_client import AlpacaClient
 from fundrunner.services.notifications import notify
+
 
 class RiskManager:
     def __init__(
@@ -43,7 +46,7 @@ class RiskManager:
 
             # Compute volatility as the standard deviation of daily returns.
             data["Return"] = data["close"].pct_change()
-            volatility = data['Return'].std()
+            volatility = data["Return"].std()
 
             if volatility > 0:
                 # Instead of scaling allocation upward when volatility is low,
@@ -57,7 +60,7 @@ class RiskManager:
             adjusted_allocation = max(adjusted_allocation, self.minimum_allocation)
 
             # Incorporate volume: if average volume is low, reduce allocation further.
-            avg_volume = data['volume'].mean()
+            avg_volume = data["volume"].mean()
             if avg_volume < 1e6:
                 adjusted_allocation *= 0.8  # reduce allocation by 20%
 
@@ -85,4 +88,3 @@ class RiskManager:
             notify("Risk Threshold Breach", f"{name}: {value} >= {limit}")
             return True
         return False
-

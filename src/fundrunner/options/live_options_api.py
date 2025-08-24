@@ -1,8 +1,10 @@
 """Helpers for retrieving live options data via Alpaca."""
 
-import requests
 import logging
-from fundrunner.utils.config import BASE_URL, DATA_URL, API_KEY, API_SECRET
+
+import requests
+
+from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL, DATA_URL
 
 logger = logging.getLogger(__name__)
 

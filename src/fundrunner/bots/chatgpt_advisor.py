@@ -1,4 +1,5 @@
 """Thin wrapper around :mod:`gpt_client` for backward compatibility."""
+
 from fundrunner.utils.gpt_client import ask_gpt
 
 

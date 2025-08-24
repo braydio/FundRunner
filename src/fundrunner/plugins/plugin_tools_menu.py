@@ -6,14 +6,13 @@ trades, optimizing a portfolio, and performing sentiment analysis. It is
 intended primarily for manual experimentation and demonstrations.
 """
 
-from rich.console import Console
-from rich.prompt import Prompt
-from rich.panel import Panel
 import pandas as pd
-
 from plugins.plot_trades import plot_trades
 from plugins.portfolio_optimizer import optimize_portfolio
 from plugins.sentiment_finbert import analyze_sentiment
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Prompt
 
 console = Console()
 

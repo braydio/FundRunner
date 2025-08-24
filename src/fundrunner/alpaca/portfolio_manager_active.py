@@ -87,8 +87,7 @@ def rebalance_decisions(
         indicate shares to buy, negative values indicate shares to sell.
     """
     portfolio_value = sum(
-        float(pos.get("qty", 0))
-        * float(prices.get(pos.get("symbol"), 0))
+        float(pos.get("qty", 0)) * float(prices.get(pos.get("symbol"), 0))
         for pos in positions
     )
     actions: Dict[str, int] = {}
@@ -97,11 +96,7 @@ def rebalance_decisions(
         if price in (None, 0):
             continue
         current_qty = next(
-            (
-                float(p.get("qty", 0))
-                for p in positions
-                if p.get("symbol") == sym
-            ),
+            (float(p.get("qty", 0)) for p in positions if p.get("symbol") == sym),
             0.0,
         )
         target_qty = (portfolio_value * weight) / price

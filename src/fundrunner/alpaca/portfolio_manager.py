@@ -1,6 +1,7 @@
 """Simplified wrappers for viewing and adjusting an Alpaca portfolio."""
 
 from typing import Iterable
+
 from fundrunner.alpaca.api_client import AlpacaClient
 from fundrunner.alpaca.trade_manager import TradeManager
 from fundrunner.services.notifications import notify
@@ -44,4 +45,3 @@ class PortfolioManager:
             notify("Rebalance Trade Executed", f"{side} {qty} {symbol}")
             orders.append(order)
         return orders
-

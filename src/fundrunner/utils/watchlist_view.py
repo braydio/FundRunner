@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Sequence
 
 from rich.console import Console
-from rich.table import Table
 from rich.prompt import Prompt
+from rich.table import Table
 
-from fundrunner.alpaca.watchlist_manager import WatchlistManager
 from fundrunner.alpaca.api_client import AlpacaClient
+from fundrunner.alpaca.watchlist_manager import WatchlistManager
 
 
 def _select_watchlist(manager: WatchlistManager, console: Console):

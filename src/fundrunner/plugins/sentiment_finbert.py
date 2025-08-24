@@ -1,8 +1,8 @@
 """Sentiment analysis using the ProsusAI FinBERT model."""
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import torch.nn.functional as F
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 # Load model + tokenizer once
 _tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")

@@ -9,6 +9,7 @@ from typing import Dict, List, Tuple
 import requests
 
 from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL
+
 from .api_client import AlpacaClient
 
 logger = logging.getLogger(__name__)

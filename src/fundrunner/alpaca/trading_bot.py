@@ -9,38 +9,37 @@ account info retrieval, position monitoring and order execution.
 import asyncio
 import logging
 import math
-import sys
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import re
+import smtplib
+import sys
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from rich.console import Console
-from rich.table import Table
 from rich.layout import Layout
 from rich.panel import Panel
-
-from fundrunner.dashboards.dashboard import Dashboard
-from fundrunner.dashboards.textual_dashboard import DashboardApp
+from rich.table import Table
 
 from fundrunner.alpaca.api_client import AlpacaClient
-from fundrunner.alpaca.portfolio_manager import PortfolioManager
-from fundrunner.alpaca.trade_manager import TradeManager
 from fundrunner.alpaca.chatgpt_advisor import get_account_overview
 from fundrunner.alpaca.llm_vetter import LLMVetter
+from fundrunner.alpaca.portfolio_manager import PortfolioManager
 from fundrunner.alpaca.risk_manager import RiskManager
+from fundrunner.alpaca.trade_manager import TradeManager
 from fundrunner.alpaca.yield_farming import YieldFarmer
+from fundrunner.dashboards.dashboard import Dashboard
+from fundrunner.dashboards.textual_dashboard import DashboardApp
 from fundrunner.utils.config import (
     DEFAULT_TICKERS,
-    EXCLUDE_TICKERS,
     DEFAULT_TICKERS_FROM_GPT,
-    SMTP_SERVER,
-    SMTP_PORT,
-    SMTP_USERNAME,
-    SMTP_PASSWORD,
-    NOTIFICATION_EMAIL,
+    EXCLUDE_TICKERS,
     MICRO_MODE,
+    NOTIFICATION_EMAIL,
     PORTFOLIO_MANAGER_MODE,
+    SMTP_PASSWORD,
+    SMTP_PORT,
+    SMTP_SERVER,
+    SMTP_USERNAME,
 )
 
 
@@ -364,7 +363,9 @@ class TradingBot:
             if ticker.strip()
         ]
         final_list = [ticker for ticker in default_list if ticker not in exclude_list]
-        self.logger.info("Final ticker list from fundrunner.utils.config: %s", final_list)
+        self.logger.info(
+            "Final ticker list from fundrunner.utils.config: %s", final_list
+        )
         return final_list
 
     async def evaluate_trade(self, symbol):
@@ -663,7 +664,7 @@ class TradingBot:
             self.generate_portfolio_table()
             await asyncio.sleep(delay)
         self.logger.info("Maintenance mode completed.")
-        
+
     def rebalance_portfolio(self):
         """Rebalance holdings based on optimized portfolio weights."""
         positions = self.portfolio.view_positions()

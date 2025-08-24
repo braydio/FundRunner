@@ -10,12 +10,12 @@ from email.mime.text import MIMEText
 import requests
 
 from fundrunner.utils.config import (
-    SMTP_SERVER,
-    SMTP_PORT,
-    SMTP_USERNAME,
-    SMTP_PASSWORD,
-    NOTIFICATION_EMAIL,
     DISCORD_WEBHOOK_URL,
+    NOTIFICATION_EMAIL,
+    SMTP_PASSWORD,
+    SMTP_PORT,
+    SMTP_SERVER,
+    SMTP_USERNAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,9 +45,7 @@ def send_discord(message: str) -> None:
     if not DISCORD_WEBHOOK_URL:
         return
     try:
-        requests.post(
-            DISCORD_WEBHOOK_URL, json={"content": message}, timeout=10
-        )
+        requests.post(DISCORD_WEBHOOK_URL, json={"content": message}, timeout=10)
     except Exception as exc:  # pragma: no cover - log only
         logger.error("Discord notification failed: %s", exc)
 

@@ -10,7 +10,9 @@ def setup_logging(name=__name__, level=logging.DEBUG, log_file="app.log"):
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 
     # Console handler
     ch = logging.StreamHandler(sys.stdout)
