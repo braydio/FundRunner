@@ -1,0 +1,33 @@
+name: DeepSource CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Python setup
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r dev-requirements.txt
+          pip install pytest pytest-cov deepsource
+
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=src --cov-report xml:coverage.xml
+
+      - name: Report coverage to DeepSource
+        run: |
+          deepsource report --analyzer test-coverage --key python --value-file ./coverage.xml
