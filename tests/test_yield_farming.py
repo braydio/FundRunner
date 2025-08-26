@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import pytest
+
 from fundrunner.alpaca.yield_farming import YieldFarmer
 
 
@@ -39,3 +41,15 @@ def test_build_dividend_portfolio_active(monkeypatch):
         ["AAA", "BBB"], allocation_percent=0.5, active=True
     )
     assert portfolio[0]["symbol"] == "BBB"
+
+
+def test_invalid_lending_params():
+    farmer = YieldFarmer(client=DummyClient())
+    with pytest.raises(ValueError):
+        farmer.build_lending_portfolio(allocation_percent=1.5)
+
+
+def test_dividend_requires_symbols():
+    farmer = YieldFarmer(client=DummyClient())
+    with pytest.raises(ValueError):
+        farmer.build_dividend_portfolio([], allocation_percent=0.5)
