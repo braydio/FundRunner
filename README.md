@@ -78,6 +78,11 @@ python plugin_tools_menu.py
 
 This menu demonstrates plotting, portfolio optimization and sentiment analysis without launching the full bot.
 
+## Yield Farming Mode
+
+Select option `9` in the main CLI menu to build simple stock lending or
+dividend portfolios from available cash.
+
 ## Notifications
 
 FundRunner can alert on trades or risk events via email and Discord. Configure

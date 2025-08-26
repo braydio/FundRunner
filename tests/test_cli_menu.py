@@ -14,11 +14,11 @@ def test_launch_watchlist_view_calls_main():
 
 def test_run_menu_triggers_watchlist_view():
     cli = CLI()
-    with patch.object(cli, "launch_watchlist_view") as launch_mock, patch(
-        "fundrunner.main.Prompt.ask", side_effect=["8", "", "0", ""]
+    with patch.object(cli, "manage_watchlist_menu") as manage_mock, patch(
+        "fundrunner.main.Prompt.ask", side_effect=["", "5", "", "0", ""]
     ):
         try:
             cli.run()
         except SystemExit:
             pass
-        launch_mock.assert_called_once()
+        manage_mock.assert_called_once()

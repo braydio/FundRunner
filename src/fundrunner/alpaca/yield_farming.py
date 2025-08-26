@@ -51,21 +51,43 @@ class YieldFarmer:
     def build_lending_portfolio(
         self, allocation_percent: float = 0.5, top_n: int = 3
     ) -> List[Dict[str, float]]:
-        """Select high-rate lending stocks using available cash."""
+        """Select high-rate lending stocks using available cash.
+
+        Parameters
+        ----------
+        allocation_percent:
+            Portion of account cash to allocate to the strategy. Must be in the
+            range ``(0, 1]``.
+        top_n:
+            Number of symbols to include, ranked by lending rate.
+        """
+
+        if not 0 < allocation_percent <= 1:
+            raise ValueError("allocation_percent must be between 0 and 1")
+        if top_n <= 0:
+            raise ValueError("top_n must be positive")
+
         account = self.client.get_account()
         cash = float(account.get("cash", 0))
         invest = cash * allocation_percent
+        if invest <= 0:
+            return []
+
         rates = self.fetch_lending_rates()
         picks = sorted(rates.items(), key=lambda x: x[1], reverse=True)[:top_n]
         if not picks:
             return []
         total_rate = sum(r for _, r in picks)
-        portfolio = []
+        portfolio: List[Dict[str, float]] = []
         for sym, rate in picks:
             weight = rate / total_rate if total_rate else 1 / len(picks)
             alloc = invest * weight
-            price = self.client.get_latest_price(sym) or 1
+            price = self.client.get_latest_price(sym)
+            if not price or price <= 0:
+                continue
             qty = int(alloc / price)
+            if qty <= 0:
+                continue
             portfolio.append({"symbol": sym, "qty": qty, "lending_rate": rate})
         return portfolio
 
@@ -100,23 +122,48 @@ class YieldFarmer:
         allocation_percent: float = 0.5,
         active: bool = False,
     ) -> List[Dict[str, float]]:
-        """Construct a portfolio focused on dividend yield."""
+        """Construct a portfolio focused on dividend yield.
+
+        Parameters
+        ----------
+        symbols:
+            Candidate symbols to inspect for dividend opportunities.
+        allocation_percent:
+            Portion of account cash to invest. Must be in ``(0, 1]``.
+        active:
+            If ``True``, select only the symbol with the nearest ex-dividend
+            date; otherwise spread allocation across all qualifying symbols.
+        """
+
+        if not symbols:
+            raise ValueError("symbols must not be empty")
+        if not 0 < allocation_percent <= 1:
+            raise ValueError("allocation_percent must be between 0 and 1")
+
         account = self.client.get_account()
         cash = float(account.get("cash", 0))
         invest = cash * allocation_percent
-        info = []
+        if invest <= 0:
+            return []
+
+        info: List[Tuple[str, float, datetime | None]] = []
         for sym in symbols:
             yield_rate, next_date = self.fetch_dividend_info(sym)
             if yield_rate:
                 info.append((sym, yield_rate, next_date))
         if not info:
             return []
+
         portfolio: List[Dict[str, float]] = []
         if active:
             info.sort(key=lambda x: (x[2] or datetime.max))
             sym, yld, nxt = info[0]
-            price = self.client.get_latest_price(sym) or 1
+            price = self.client.get_latest_price(sym)
+            if not price or price <= 0:
+                return []
             qty = int(invest / price)
+            if qty <= 0:
+                return []
             portfolio.append(
                 {
                     "symbol": sym,
@@ -126,11 +173,16 @@ class YieldFarmer:
                 }
             )
             return portfolio
+
         info.sort(key=lambda x: x[1], reverse=True)
         weight = invest / len(info)
         for sym, yld, nxt in info:
-            price = self.client.get_latest_price(sym) or 1
+            price = self.client.get_latest_price(sym)
+            if not price or price <= 0:
+                continue
             qty = int(weight / price)
+            if qty <= 0:
+                continue
             portfolio.append(
                 {
                     "symbol": sym,

@@ -9,6 +9,7 @@ from fundrunner.alpaca.trade_manager import TradeManager
 from fundrunner.alpaca.portfolio_manager import PortfolioManager
 from fundrunner.alpaca.watchlist_manager import WatchlistManager
 from fundrunner.alpaca.trading_bot import TradingBot
+from fundrunner.alpaca.yield_farming import YieldFarmer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -170,6 +171,7 @@ class CLI:
             ("6", "RAG Agent - Ask Advisor"),
             ("7", "Run Trading Bot"),
             ("8", "View Config"),
+            ("9", "Run Yield Farmer"),
             ("0", "Exit"),
         ]
 
@@ -475,6 +477,71 @@ class CLI:
         except Exception as e:
             self.console.print(f"[red]Error running trading bot: {e}[/red]")
 
+    def run_yield_farming(self):
+        """Interactively build a yield-focused portfolio."""
+
+        farmer = YieldFarmer()
+        strategy = Prompt.ask(
+            "Select yield strategy", choices=["lending", "dividend"], default="lending"
+        )
+        try:
+            if strategy == "lending":
+                allocation = float(
+                    Prompt.ask(
+                        "Allocation percent (0-1)", default="0.5"
+                    )
+                )
+                top_n = int(Prompt.ask("Top N symbols", default="3"))
+                portfolio = farmer.build_lending_portfolio(
+                    allocation_percent=allocation, top_n=top_n
+                )
+                table = Table(show_edge=True, title="Lending Portfolio")
+                table.add_column("Symbol")
+                table.add_column("Qty", justify="right")
+                table.add_column("Rate", justify="right")
+                for row in portfolio:
+                    table.add_row(
+                        row["symbol"],
+                        str(row["qty"]),
+                        f"{row['lending_rate']:.3f}",
+                    )
+            else:
+                symbols_str = Prompt.ask(
+                    "Symbols to consider (comma separated)", default=""
+                )
+                symbols = [s.strip().upper() for s in symbols_str.split(",") if s.strip()]
+                allocation = float(
+                    Prompt.ask(
+                        "Allocation percent (0-1)", default="0.5"
+                    )
+                )
+                active_choice = Prompt.ask(
+                    "Pick next ex-dividend stock only?", choices=["y", "n"], default="n"
+                )
+                portfolio = farmer.build_dividend_portfolio(
+                    symbols,
+                    allocation_percent=allocation,
+                    active=active_choice == "y",
+                )
+                table = Table(show_edge=True, title="Dividend Portfolio")
+                table.add_column("Symbol")
+                table.add_column("Qty", justify="right")
+                table.add_column("Yield", justify="right")
+                table.add_column("Next Ex-Div", justify="right")
+                for row in portfolio:
+                    table.add_row(
+                        row["symbol"],
+                        str(row["qty"]),
+                        f"{row['dividend_yield']:.3f}",
+                        row.get("next_ex_div") or "N/A",
+                    )
+            if portfolio:
+                self.console.print(table)
+            else:
+                self.console.print("[yellow]No qualifying symbols found.[/yellow]")
+        except Exception as e:
+            self.console.print(f"[red]Yield farming failed: {e}[/red]")
+
     def run_chatgpt_trading_bot(self):
         """Invoke the ChatGPT trading controller."""
         try:
@@ -622,7 +689,7 @@ class CLI:
             self.print_menu()
             choice = Prompt.ask(
                 "Select an option",
-                choices=["0", "1", "2", "3", "4", "5", "6", "7", "8"],
+                choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
             )
 
             if choice == "1":
@@ -641,6 +708,8 @@ class CLI:
                 self.run_trading_bot()
             elif choice == "8":
                 self.view_config_menu()
+            elif choice == "9":
+                self.run_yield_farming()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
                 sys.exit(0)
