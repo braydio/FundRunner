@@ -6,3 +6,12 @@ textual
 pandas
 numpy
 flask
+# New dependencies for agentic workflow
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+beautifulsoup4>=4.12.0
+markdownify>=0.11.0
+httpx>=0.25.0
+pydantic>=2.0.0
+typer>=0.9.0
+joblib>=1.3.0

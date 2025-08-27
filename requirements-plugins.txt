@@ -5,3 +5,10 @@ tiktoken
 openai>=1.0
 PyPortfolioOpt
 mplfinance
+# OpenBB integration
+openbb>=4.0.0
+# Additional ML and analysis tools
+scipy>=1.10.0
+sklearn
+plotly>=5.0.0
+seaborn>=0.12.0

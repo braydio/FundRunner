@@ -29,6 +29,15 @@ dependencies = [
     "pandas>=2.0.0",
     "numpy>=1.24.0",
     "flask>=2.3.0",
+    # Agentic workflow dependencies
+    "chromadb>=0.4.0",
+    "sentence-transformers>=2.2.0",
+    "beautifulsoup4>=4.12.0",
+    "markdownify>=0.11.0",
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "typer>=0.9.0",
+    "joblib>=1.3.0",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +48,12 @@ plugins = [
     "openai>=1.0.0",
     "PyPortfolioOpt>=1.5.0",
     "mplfinance>=0.12.0",
+    # OpenBB and additional tools
+    "openbb>=4.0.0",
+    "scipy>=1.10.0",
+    "scikit-learn>=1.3.0",
+    "plotly>=5.0.0",
+    "seaborn>=0.12.0",
 ]
 dev = [
     "flake8>=6.0.0",

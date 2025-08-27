@@ -22,14 +22,19 @@ FundRunner is a comprehensive algorithmic trading application that integrates wi
 bash scripts/setup.sh
 source .venv/bin/activate
 
-# For optional plugins (ML, visualization, portfolio optimization)
+# For optional plugins (ML, visualization, portfolio optimization, OpenBB)
 bash scripts/setup.sh --plugins
+
+# For full agentic workflow with ChromaDB (recommended)
+bash scripts/setup.sh --plugins --chroma
 
 # Configure environment
 cp .env.example .env
 # Edit .env with your API keys - recommend starting with:
 # SIMULATION_MODE=true
 # ALPACA_BASE_URL=https://paper-api.alpaca.markets
+# CHROMA_HOST=localhost
+# CHROMA_PORT=8000
 ```
 
 ### Essential Environment Setup
@@ -266,6 +271,74 @@ Provides interactive access to:
 - Multi-metric analysis
 
 ⚠️ **Note**: ML plugins may download large models and benefit from GPU acceleration.
+
+## ChromaDB and Agentic Workflow
+
+### ChromaDB Setup
+```bash
+# Start ChromaDB server (choose one method)
+
+# Method 1: Docker (recommended)
+docker run -d --name chroma-db -p 8000:8000 chromadb/chroma:latest
+
+# Method 2: Local installation
+pip install chromadb
+chroma run --path ./chroma_data --port 8000
+```
+
+### Knowledge Base Indexing
+```bash
+# Index FundRunner codebase
+python scripts/chroma_index.py --source src --collection fundrunner-knowledge
+
+# Index with external repos (requires cloning)
+python scripts/chroma_index.py --source /path/to/OpenBB --repo-tag openbb
+python scripts/chroma_index.py --source /path/to/Arbit --repo-tag arbit
+
+# Query knowledge base
+python scripts/query_chroma.py "momentum trading strategy with Kelly sizing"
+python scripts/query_chroma.py --preset strategy "mean reversion"
+```
+
+### Agentic Workflow Environment Variables
+```bash
+# ChromaDB Configuration
+CHROMA_HOST=localhost
+CHROMA_PORT=8000
+CHROMA_COLLECTION=fundrunner-knowledge
+CHROMA_MODEL=all-MiniLM-L6-v2
+
+# OpenBB Integration
+OPENBB_API_KEY=your_openbb_api_key_here
+
+# Agent Configuration
+AGENTS_ARTIFACTS_DIR=artifacts
+AGENTS_MAX_CONTEXT_TOKENS=8000
+AGENTS_AUTO_APPROVE=false
+AGENTS_HUMAN_IN_LOOP=true
+
+# Enhanced GPT Configuration
+GPT_JSON_STRICT=true
+LLM_REQUEST_TIMEOUT=30
+```
+
+### Agent Workflow Commands
+```bash
+# Generate a new trading strategy
+python scripts/run_agents_demo.py demo:generate-strategy --name momentum_v2
+
+# Research market opportunities
+python scripts/run_agents_demo.py demo:strategy-research --tickers AAPL,MSFT
+
+# Backtest and optimize existing strategy
+python scripts/run_agents_demo.py demo:backtest-opt --strategy momentum_v1
+
+# Review code changes
+python scripts/run_agents_demo.py demo:review --files src/fundrunner/bots/
+
+# Cross-repository analysis
+python scripts/run_agents_demo.py demo:crossrepo --repos FundRunner,OpenBB
+```
 
 ## Development Workflow
 
