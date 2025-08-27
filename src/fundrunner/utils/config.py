@@ -56,6 +56,8 @@ if MICRO_MODE:
 
 # GPT model configuration (centralized so all modules use the same model)
 GPT_MODEL = os.getenv("GPT_MODEL", "gpt-4o-mini")
+GPT_JSON_STRICT = os.getenv("GPT_JSON_STRICT", "true").lower() == "true"
+LLM_REQUEST_TIMEOUT = int(os.getenv("LLM_REQUEST_TIMEOUT", "30"))
 
 # Tradier API key for live options data
 TRADIER_API_KEY = os.getenv("TRADIER_API_KEY", "your_tradier_api_key_here")
@@ -72,36 +74,22 @@ DAILY_PROFIT_TARGET = float(os.getenv("DAILY_PROFIT_TARGET", "1000"))
 PRE_MARKET_START = os.getenv("PRE_MARKET_START", "08:00")
 EXTENDED_HOURS_END = os.getenv("EXTENDED_HOURS_END", "20:00")
 
-# Plaid Transfer & Liabilities API integration
-PLAID_ENVIRONMENT = os.getenv("PLAID_ENVIRONMENT", "sandbox").lower()
-_PLAID_ENV_TO_URL = {
-    "sandbox": "https://sandbox.plaid.com",
-    "development": "https://development.plaid.com",
-    "production": "https://production.plaid.com",
-}
-PLAID_BASE_URL = os.getenv(
-    "PLAID_BASE_URL",
-    _PLAID_ENV_TO_URL.get(PLAID_ENVIRONMENT, _PLAID_ENV_TO_URL["sandbox"]),
-)
-PLAID_CLIENT_ID = os.getenv("PLAID_CLIENT_ID", "")
-PLAID_SECRET = os.getenv("PLAID_SECRET", "")
-PLAID_TRANSFER_ACCESS_TOKEN = os.getenv("PLAID_TRANSFER_ACCESS_TOKEN", "")
-PLAID_TRANSFER_ACCOUNT_ID = os.getenv("PLAID_TRANSFER_ACCOUNT_ID", "")
-PLAID_TRANSFER_ORIGINATION_ACCOUNT_ID = os.getenv(
-    "PLAID_TRANSFER_ORIGINATION_ACCOUNT_ID", ""
-)
-PLAID_TRANSFER_USER_LEGAL_NAME = os.getenv("PLAID_TRANSFER_USER_LEGAL_NAME", "")
-PLAID_TRANSFER_USER_EMAIL = os.getenv("PLAID_TRANSFER_USER_EMAIL", "")
-PLAID_TRANSFER_USER_ADDRESS_STREET = os.getenv(
-    "PLAID_TRANSFER_USER_ADDRESS_STREET", ""
-)
-PLAID_TRANSFER_USER_ADDRESS_CITY = os.getenv("PLAID_TRANSFER_USER_ADDRESS_CITY", "")
-PLAID_TRANSFER_USER_ADDRESS_REGION = os.getenv(
-    "PLAID_TRANSFER_USER_ADDRESS_REGION", ""
-)
-PLAID_TRANSFER_USER_ADDRESS_POSTAL_CODE = os.getenv(
-    "PLAID_TRANSFER_USER_ADDRESS_POSTAL_CODE", ""
-)
-PLAID_TRANSFER_USER_ADDRESS_COUNTRY = os.getenv(
-    "PLAID_TRANSFER_USER_ADDRESS_COUNTRY", ""
-)
+# ChromaDB Configuration
+CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
+CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
+CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "fundrunner-knowledge")
+CHROMA_MODEL = os.getenv("CHROMA_MODEL", "all-MiniLM-L6-v2")
+
+# OpenBB Configuration
+OPENBB_API_KEY = os.getenv("OPENBB_API_KEY", "your_openbb_api_key_here")
+
+# Additional provider API keys (optional)
+FRED_API_KEY = os.getenv("FRED_API_KEY", "")
+POLYGON_API_KEY = os.getenv("POLYGON_API_KEY", "")
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "")
+
+# Agentic Workflow Configuration
+AGENTS_ARTIFACTS_DIR = os.getenv("AGENTS_ARTIFACTS_DIR", "artifacts")
+AGENTS_MAX_CONTEXT_TOKENS = int(os.getenv("AGENTS_MAX_CONTEXT_TOKENS", "8000"))
+AGENTS_AUTO_APPROVE = os.getenv("AGENTS_AUTO_APPROVE", "false").lower() == "true"
+AGENTS_HUMAN_IN_LOOP = os.getenv("AGENTS_HUMAN_IN_LOOP", "true").lower() == "true"
