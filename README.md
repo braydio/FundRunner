@@ -12,6 +12,10 @@ project/
 └── tests/
 ```
 
+## Development Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for the current yield farming development pipeline.
+
 ## Documentation
 
 Research and design documents are consolidated under `docs/PortfolioManager`.

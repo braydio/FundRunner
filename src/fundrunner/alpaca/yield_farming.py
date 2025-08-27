@@ -6,9 +6,7 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Tuple
 
-import requests
-
-from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL
+from fundrunner.services.lending_rates import fetch_lending_rates
 from .api_client import AlpacaClient
 
 logger = logging.getLogger(__name__)
@@ -24,29 +22,9 @@ class YieldFarmer:
     # Stock Lending Helpers
     # ----------------------------
     def fetch_lending_rates(self) -> Dict[str, float]:
-        """Return stock lending rates keyed by symbol.
+        """Proxy to :func:`fundrunner.services.lending_rates.fetch_lending_rates`."""
 
-        Alpaca does not currently expose public stock lending endpoints. This
-        method attempts to call a hypothetical ``/v2/portfolio/stock_lending``
-        endpoint and falls back to stub data if the request fails.
-        """
-        endpoint = f"{BASE_URL}/v2/portfolio/stock_lending"
-        headers = {
-            "APCA-API-KEY-ID": API_KEY,
-            "APCA-API-SECRET-KEY": API_SECRET,
-        }
-        try:
-            resp = requests.get(endpoint, headers=headers, timeout=10)
-            if resp.ok:
-                data = resp.json()
-                return {
-                    item["symbol"]: float(item.get("rate", 0))
-                    for item in data.get("rates", [])
-                }
-        except Exception as exc:  # pragma: no cover - network failure
-            logger.warning("Failed to fetch lending rates: %s", exc)
-        # Fallback stub
-        return {"AAPL": 0.02, "MSFT": 0.015, "GOOGL": 0.012}
+        return fetch_lending_rates()
 
     def build_lending_portfolio(
         self, allocation_percent: float = 0.5, top_n: int = 3
