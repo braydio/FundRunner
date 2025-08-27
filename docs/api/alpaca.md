@@ -180,8 +180,7 @@ Implements yield-focused strategies.
 
 ### Stock Lending
 
-- `fetch_lending_rates()` → return lending rates (fallback if API fails).
-- `build_lending_portfolio(allocation_percent=0.5, top_n=3)` → construct portfolio of top lending-rate stocks.
+- `build_lending_portfolio(allocation_percent=0.5, top_n=3)` → construct portfolio of top lending-rate stocks using `LendingRateService`.
 
 ### Dividend Capture
 

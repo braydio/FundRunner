@@ -19,7 +19,9 @@ class DummyClient:
 def test_build_lending_portfolio(monkeypatch):
     farmer = YieldFarmer(client=DummyClient())
     monkeypatch.setattr(
-        farmer, "fetch_lending_rates", lambda: {"AAA": 0.03, "BBB": 0.02}
+        farmer.lending_service,
+        "get_rates",
+        lambda symbols: {"AAA": 0.03, "BBB": 0.02},
     )
     portfolio = farmer.build_lending_portfolio(allocation_percent=0.5, top_n=2)
     assert len(portfolio) == 2
