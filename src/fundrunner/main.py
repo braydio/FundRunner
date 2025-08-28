@@ -10,6 +10,7 @@ from fundrunner.alpaca.portfolio_manager import PortfolioManager
 from fundrunner.alpaca.watchlist_manager import WatchlistManager
 from fundrunner.alpaca.trading_bot import TradingBot
 from fundrunner.alpaca.yield_farming import YieldFarmer
+from fundrunner.services.lending_rates import LendingRateService
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -478,33 +479,67 @@ class CLI:
             self.console.print(f"[red]Error running trading bot: {e}[/red]")
 
     def run_yield_farming(self):
-        """Interactively build a yield-focused portfolio."""
+        """Fetch lending rates or build a dividend-focused portfolio."""
 
+        rate_service = LendingRateService()
         farmer = YieldFarmer()
         strategy = Prompt.ask(
             "Select yield strategy", choices=["lending", "dividend"], default="lending"
         )
         try:
             if strategy == "lending":
-                allocation = float(
-                    Prompt.ask(
-                        "Allocation percent (0-1)", default="0.5"
+                symbols_str = Prompt.ask(
+                    "Symbols to consider (comma separated)", default=""
+                )
+                symbols = [s.strip().upper() for s in symbols_str.split(",") if s.strip()]
+                allocation_str = Prompt.ask(
+                    "Allocation percent (0-1)", default="0.5"
+                )
+                top_n_str = Prompt.ask("Top N symbols", default="3")
+
+                try:
+                    allocation = float(allocation_str)
+                except ValueError:
+                    self.console.print("[red]Allocation percent must be a number.[/red]")
+                    return
+                try:
+                    top_n = int(top_n_str)
+                except ValueError:
+                    self.console.print("[red]Top N must be an integer.[/red]")
+                    return
+                if not symbols:
+                    self.console.print("[red]Please provide at least one symbol.[/red]")
+                    return
+                if not 0 < allocation <= 1:
+                    self.console.print(
+                        "[red]Allocation percent must be between 0 and 1.[/red]"
                     )
-                )
-                top_n = int(Prompt.ask("Top N symbols", default="3"))
-                portfolio = farmer.build_lending_portfolio(
-                    allocation_percent=allocation, top_n=top_n
-                )
-                table = Table(show_edge=True, title="Lending Portfolio")
+                    return
+                if top_n <= 0:
+                    self.console.print("[red]Top N must be positive.[/red]")
+                    return
+
+                try:
+                    rates = rate_service.get_rates(symbols)
+                except FundRunnerError as exc:
+                    self.console.print(
+                        f"[red]Failed to fetch lending rates: {exc}[/red]"
+                    )
+                    return
+
+                if not rates:
+                    self.console.print(
+                        "[yellow]No rates available for provided symbols.[/yellow]"
+                    )
+                    return
+
+                picks = sorted(rates.items(), key=lambda x: x[1], reverse=True)[:top_n]
+                table = Table(show_edge=True, title="Lending Rates")
                 table.add_column("Symbol")
-                table.add_column("Qty", justify="right")
                 table.add_column("Rate", justify="right")
-                for row in portfolio:
-                    table.add_row(
-                        row["symbol"],
-                        str(row["qty"]),
-                        f"{row['lending_rate']:.3f}",
-                    )
+                for sym, rate in picks:
+                    table.add_row(sym, f"{rate:.3f}")
+                self.console.print(table)
             else:
                 symbols_str = Prompt.ask(
                     "Symbols to consider (comma separated)", default=""
@@ -523,22 +558,22 @@ class CLI:
                     allocation_percent=allocation,
                     active=active_choice == "y",
                 )
-                table = Table(show_edge=True, title="Dividend Portfolio")
-                table.add_column("Symbol")
-                table.add_column("Qty", justify="right")
-                table.add_column("Yield", justify="right")
-                table.add_column("Next Ex-Div", justify="right")
-                for row in portfolio:
-                    table.add_row(
-                        row["symbol"],
-                        str(row["qty"]),
-                        f"{row['dividend_yield']:.3f}",
-                        row.get("next_ex_div") or "N/A",
-                    )
-            if portfolio:
-                self.console.print(table)
-            else:
-                self.console.print("[yellow]No qualifying symbols found.[/yellow]")
+                if portfolio:
+                    table = Table(show_edge=True, title="Dividend Portfolio")
+                    table.add_column("Symbol")
+                    table.add_column("Qty", justify="right")
+                    table.add_column("Yield", justify="right")
+                    table.add_column("Next Ex-Div", justify="right")
+                    for row in portfolio:
+                        table.add_row(
+                            row["symbol"],
+                            str(row["qty"]),
+                            f"{row['dividend_yield']:.3f}",
+                            row.get("next_ex_div") or "N/A",
+                        )
+                    self.console.print(table)
+                else:
+                    self.console.print("[yellow]No qualifying symbols found.[/yellow]")
         except Exception as e:
             self.console.print(f"[red]Yield farming failed: {e}[/red]")
 
