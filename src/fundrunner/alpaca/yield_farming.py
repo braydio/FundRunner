@@ -8,45 +8,35 @@ from typing import Dict, List, Tuple
 
 import requests
 
-from fundrunner.utils.config import API_KEY, API_SECRET, BASE_URL
+from fundrunner.services.lending_rates import LendingRateService
 from .api_client import AlpacaClient
 
 logger = logging.getLogger(__name__)
 
 
-class YieldFarmer:
-    """Automates basic stock lending and dividend yield strategies."""
+DEFAULT_LENDING_SYMBOLS = ["AAPL", "MSFT", "GOOGL"]
 
-    def __init__(self, client: AlpacaClient | None = None):
+
+class YieldFarmer:
+    """Automates basic stock lending and dividend yield strategies.
+
+    The class relies on :class:`LendingRateService` to obtain stock lending
+    rates. A custom service instance can be supplied for testing or
+    alternative implementations.
+    """
+
+    def __init__(
+        self,
+        client: AlpacaClient | None = None,
+        lending_service: LendingRateService | None = None,
+    ) -> None:
         self.client = client or AlpacaClient()
+        self.lending_service = lending_service or LendingRateService()
+        self.lending_symbols = DEFAULT_LENDING_SYMBOLS
 
     # ----------------------------
     # Stock Lending Helpers
     # ----------------------------
-    def fetch_lending_rates(self) -> Dict[str, float]:
-        """Return stock lending rates keyed by symbol.
-
-        Alpaca does not currently expose public stock lending endpoints. This
-        method attempts to call a hypothetical ``/v2/portfolio/stock_lending``
-        endpoint and falls back to stub data if the request fails.
-        """
-        endpoint = f"{BASE_URL}/v2/portfolio/stock_lending"
-        headers = {
-            "APCA-API-KEY-ID": API_KEY,
-            "APCA-API-SECRET-KEY": API_SECRET,
-        }
-        try:
-            resp = requests.get(endpoint, headers=headers, timeout=10)
-            if resp.ok:
-                data = resp.json()
-                return {
-                    item["symbol"]: float(item.get("rate", 0))
-                    for item in data.get("rates", [])
-                }
-        except Exception as exc:  # pragma: no cover - network failure
-            logger.warning("Failed to fetch lending rates: %s", exc)
-        # Fallback stub
-        return {"AAPL": 0.02, "MSFT": 0.015, "GOOGL": 0.012}
 
     def build_lending_portfolio(
         self, allocation_percent: float = 0.5, top_n: int = 3
@@ -60,6 +50,11 @@ class YieldFarmer:
             range ``(0, 1]``.
         top_n:
             Number of symbols to include, ranked by lending rate.
+        
+        Notes
+        -----
+        Lending rates are fetched via :class:`LendingRateService` using the
+        symbols listed in ``self.lending_symbols``.
         """
 
         if not 0 < allocation_percent <= 1:
@@ -73,7 +68,7 @@ class YieldFarmer:
         if invest <= 0:
             return []
 
-        rates = self.fetch_lending_rates()
+        rates = self.lending_service.get_rates(self.lending_symbols)
         picks = sorted(rates.items(), key=lambda x: x[1], reverse=True)[:top_n]
         if not picks:
             return []
