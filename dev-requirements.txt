@@ -1,3 +1,5 @@
 -r requirements-core.txt
 -r requirements-plugins.txt
 flake8
+pytest
+pytest-cov

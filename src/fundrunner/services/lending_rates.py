@@ -16,6 +16,10 @@ from typing import Dict, List
 import requests
 
 from fundrunner.utils.error_handling import ErrorType, FundRunnerError
+from fundrunner.services.notifications import (
+    log_lending_rate_failure,
+    log_lending_rate_success,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -107,10 +111,16 @@ class LendingRateService:
         return rates
 
     def get_rates(self, symbols: List[str]) -> Dict[str, float]:
-        """Fetch live lending rates, falling back to stub rates on error."""
+        """Fetch live lending rates, falling back to stub rates on error.
+
+        Successes and failures are logged via notification helpers.
+        """
 
         try:
-            return self.fetch_live_rates(symbols)
+            rates = self.fetch_live_rates(symbols)
+            log_lending_rate_success(symbols, rates)
+            return rates
         except FundRunnerError as exc:  # pragma: no cover - logging and fallback
+            log_lending_rate_failure(symbols, exc)
             logger.warning("Falling back to stub lending rates: %s", exc)
             return self.fetch_stub_rates(symbols)
