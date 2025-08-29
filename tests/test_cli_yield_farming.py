@@ -19,12 +19,21 @@ def test_run_yield_farming_displays_rates(monkeypatch):
     responses = iter(["lending", "AAPL,MSFT", "0.5", "2"])
     monkeypatch.setattr(Prompt, "ask", lambda *a, **k: next(responses))
     monkeypatch.setattr(
-        LendingRateService, "get_rates", lambda self, symbols: {"AAPL": 0.02, "MSFT": 0.015}
+        LendingRateService,
+        "get_rates",
+        lambda self, symbols: {"AAPL": 0.02, "MSFT": 0.015},
     )
+    called = {}
+
+    def fake_success(symbols, rates):
+        called["success"] = (symbols, rates)
+
+    monkeypatch.setattr("fundrunner.main.log_lending_rate_success", fake_success)
 
     cli.run_yield_farming()
     output = cli.console.file.getvalue()
     assert "AAPL" in output and "0.020" in output
+    assert called["success"] == (["AAPL", "MSFT"], {"AAPL": 0.02, "MSFT": 0.015})
 
 
 def test_run_yield_farming_handles_service_error(monkeypatch):
@@ -36,8 +45,14 @@ def test_run_yield_farming_handles_service_error(monkeypatch):
         raise FundRunnerError("boom")
 
     monkeypatch.setattr(LendingRateService, "get_rates", boom)
+    called = {}
+
+    def fake_failure(symbols, error):
+        called["failure"] = (symbols, str(error))
+
+    monkeypatch.setattr("fundrunner.main.log_lending_rate_failure", fake_failure)
 
     cli.run_yield_farming()
     output = cli.console.file.getvalue()
     assert "Failed to fetch lending rates" in output
-
+    assert called["failure"] == (["AAPL"], "boom")
