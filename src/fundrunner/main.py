@@ -486,10 +486,12 @@ class CLI:
             self.console.print(f"[red]Error running trading bot: {e}[/red]")
 
     def run_yield_farming(self):
-        """Fetch lending rates or build a dividend-focused portfolio."""
+        """Fetch lending rates or build a dividend-focused portfolio.
 
-        rate_service = LendingRateService()
-        farmer = YieldFarmer()
+        Validates user inputs before requesting lending rates and handles
+        service errors gracefully.
+        """
+
         strategy = Prompt.ask(
             "Select yield strategy", choices=["lending", "dividend"], default="lending"
         )
@@ -514,10 +516,18 @@ class CLI:
                 try:
                     top_n = int(top_n_str)
                 except ValueError:
-                    self.console.print("[red]Top N must be an integer.[/red]")
+                    self.console.print(
+                        "[red]Allocation percent must be a number and Top N an integer.[/red]"
+                    )
                     return
+
                 if not symbols:
                     self.console.print("[red]Please provide at least one symbol.[/red]")
+                    return
+                if any(not sym.isalpha() for sym in symbols):
+                    self.console.print(
+                        "[red]Symbols must contain only alphabetic characters.[/red]"
+                    )
                     return
                 if not 0 < allocation <= 1:
                     self.console.print(
@@ -528,6 +538,7 @@ class CLI:
                     self.console.print("[red]Top N must be positive.[/red]")
                     return
 
+                rate_service = LendingRateService()
                 try:
                     rates = rate_service.get_rates(symbols)
                     log_lending_rate_success(symbols, rates)
@@ -535,6 +546,11 @@ class CLI:
                     log_lending_rate_failure(symbols, exc)
                     self.console.print(
                         f"[red]Failed to fetch lending rates: {exc}[/red]"
+                    )
+                    return
+                except Exception as exc:
+                    self.console.print(
+                        f"[red]Unexpected error fetching lending rates: {exc}[/red]"
                     )
                     return
 
@@ -564,6 +580,7 @@ class CLI:
                 active_choice = Prompt.ask(
                     "Pick next ex-dividend stock only?", choices=["y", "n"], default="n"
                 )
+                farmer = YieldFarmer()
                 portfolio = farmer.build_dividend_portfolio(
                     symbols,
                     allocation_percent=allocation,
