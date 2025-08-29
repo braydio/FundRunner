@@ -1,3 +1,5 @@
+"""Tests for the :mod:`fundrunner.services.lending_rates` module."""
+
 import pytest
 
 from fundrunner.services.lending_rates import LendingRateService
@@ -37,3 +39,34 @@ def test_fetch_live_rates_requires_credentials(monkeypatch):
     service = LendingRateService()
     with pytest.raises(FundRunnerError):
         service.fetch_live_rates(["AAPL"])
+
+
+def test_fetch_live_rates_parses_response(monkeypatch):
+    """Live rate fetch parses the API response and returns floats."""
+
+    monkeypatch.setenv("APCA_API_KEY_ID", "key")
+    monkeypatch.setenv("APCA_API_SECRET_KEY", "secret")
+    service = LendingRateService()
+
+    sample = {"rates": [{"symbol": "AAPL", "rate": 0.02}, {"symbol": "MSFT", "rate": "0.015"}]}
+
+    class MockResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self):
+            return sample
+
+    def fake_get(url, headers, params, timeout):
+        assert "stock-lending/rates" in url
+        assert headers["APCA-API-KEY-ID"] == "key"
+        assert params == {"symbols": "AAPL,MSFT"}
+        assert timeout == 10
+        return MockResponse()
+
+    monkeypatch.setattr(
+        "fundrunner.services.lending_rates.requests.get", fake_get
+    )
+
+    rates = service.fetch_live_rates(["AAPL", "MSFT"])
+    assert rates == {"AAPL": 0.02, "MSFT": 0.015}
