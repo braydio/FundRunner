@@ -11,6 +11,10 @@ from fundrunner.alpaca.watchlist_manager import WatchlistManager
 from fundrunner.alpaca.trading_bot import TradingBot
 from fundrunner.alpaca.yield_farming import YieldFarmer
 from fundrunner.services.lending_rates import LendingRateService
+from fundrunner.services.notifications import (
+    log_lending_rate_failure,
+    log_lending_rate_success,
+)
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -21,7 +25,7 @@ from fundrunner.utils.error_handling import (
     setup_global_error_handler,
     FundRunnerError,
     TradingError,
-    safe_execute
+    safe_execute,
 )
 import requests
 from fundrunner.utils.config import TRADING_DAEMON_URL
@@ -71,14 +75,17 @@ class CLI:
                 border_style="green",
             )
             self.console.print(info_panel)
-            
+
         success, result = safe_execute(_view_account)
         if not success:
-            error_msg = format_user_error(result, "Failed to retrieve account information")
+            error_msg = format_user_error(
+                result, "Failed to retrieve account information"
+            )
             self.console.print(f"[red]{error_msg}[/red]")
 
     def show_portfolio_status(self):
         """Render the portfolio dashboard with position details and overall profit/loss."""
+
         def _show_portfolio():
             account = self.portfolio_manager.view_account()
             positions = self.portfolio_manager.view_positions()
@@ -122,7 +129,7 @@ class CLI:
             )
             self.console.print(pl_panel)
             return {"account": account, "positions": positions}
-            
+
         success, result = safe_execute(_show_portfolio)
         if success:
             return result
@@ -298,7 +305,7 @@ class CLI:
                 order = self.trade_manager.buy(symbol, qty, order_type, time_in_force)
             elif side == "sell":
                 order = self.trade_manager.sell(symbol, qty, order_type, time_in_force)
-            
+
             if order:
                 self.console.print(f"[green]Order submitted:[/green]\n{order}")
                 trade_details = {
@@ -315,7 +322,7 @@ class CLI:
                 return True
             else:
                 raise TradingError("Order submission returned None", "SUBMIT_FAILED")
-                
+
         success, result = safe_execute(_submit_trade)
         if not success:
             error_msg = format_user_error(result, "Failed to submit trade order")
@@ -493,14 +500,20 @@ class CLI:
                 symbols_str = Prompt.ask(
                     "Symbols to consider (comma separated)", default=""
                 )
-                symbols = [s.strip().upper() for s in symbols_str.split(",") if s.strip()]
-                allocation_str = Prompt.ask(
-                    "Allocation percent (0-1)", default="0.5"
-                )
+                symbols = [
+                    s.strip().upper() for s in symbols_str.split(",") if s.strip()
+                ]
+                allocation_str = Prompt.ask("Allocation percent (0-1)", default="0.5")
                 top_n_str = Prompt.ask("Top N symbols", default="3")
 
                 try:
                     allocation = float(allocation_str)
+                except ValueError:
+                    self.console.print(
+                        "[red]Allocation percent must be a number.[/red]"
+                    )
+                    return
+                try:
                     top_n = int(top_n_str)
                 except ValueError:
                     self.console.print(
@@ -528,7 +541,9 @@ class CLI:
                 rate_service = LendingRateService()
                 try:
                     rates = rate_service.get_rates(symbols)
+                    log_lending_rate_success(symbols, rates)
                 except FundRunnerError as exc:
+                    log_lending_rate_failure(symbols, exc)
                     self.console.print(
                         f"[red]Failed to fetch lending rates: {exc}[/red]"
                     )
@@ -556,11 +571,11 @@ class CLI:
                 symbols_str = Prompt.ask(
                     "Symbols to consider (comma separated)", default=""
                 )
-                symbols = [s.strip().upper() for s in symbols_str.split(",") if s.strip()]
+                symbols = [
+                    s.strip().upper() for s in symbols_str.split(",") if s.strip()
+                ]
                 allocation = float(
-                    Prompt.ask(
-                        "Allocation percent (0-1)", default="0.5"
-                    )
+                    Prompt.ask("Allocation percent (0-1)", default="0.5")
                 )
                 active_choice = Prompt.ask(
                     "Pick next ex-dividend stock only?", choices=["y", "n"], default="n"
@@ -768,7 +783,7 @@ def main():
     """Entry point for the FundRunner CLI application."""
     # Setup global error handling
     setup_global_error_handler()
-    
+
     cli = CLI()
     cli.run()
 

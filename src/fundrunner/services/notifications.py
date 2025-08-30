@@ -6,6 +6,7 @@ import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import Iterable, Mapping
 
 import requests
 
@@ -45,9 +46,7 @@ def send_discord(message: str) -> None:
     if not DISCORD_WEBHOOK_URL:
         return
     try:
-        requests.post(
-            DISCORD_WEBHOOK_URL, json={"content": message}, timeout=10
-        )
+        requests.post(DISCORD_WEBHOOK_URL, json={"content": message}, timeout=10)
     except Exception as exc:  # pragma: no cover - log only
         logger.error("Discord notification failed: %s", exc)
 
@@ -56,3 +55,32 @@ def notify(subject: str, message: str) -> None:
     """Send an alert via all configured channels."""
     send_email(subject, message)
     send_discord(f"**{subject}**\n{message}")
+
+
+def log_lending_rate_success(
+    symbols: Iterable[str], rates: Mapping[str, float]
+) -> None:
+    """Log and notify a successful lending rate retrieval.
+
+    Args:
+        symbols: Iterable of symbols that were queried.
+        rates: Mapping of symbol to retrieved lending rate.
+    """
+
+    rate_str = ", ".join(f"{sym}: {rate:.3f}" for sym, rate in rates.items())
+    message = f"Fetched lending rates for {', '.join(symbols)}: {rate_str}"
+    logger.info(message)
+    notify("Lending rate success", message)
+
+
+def log_lending_rate_failure(symbols: Iterable[str], error: Exception) -> None:
+    """Log and notify a failure to retrieve lending rates.
+
+    Args:
+        symbols: Iterable of symbols that were queried.
+        error: Exception describing the failure.
+    """
+
+    message = f"Failed to fetch lending rates for {', '.join(symbols)}: {error}"
+    logger.error(message)
+    notify("Lending rate failure", message)
