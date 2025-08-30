@@ -6,6 +6,8 @@ This folder contains documentation for all **external APIs** and **plugin interf
 
 - [Alpaca Markets API](https://alpaca.markets/docs/)
   - Used for trading, account data, and market data feeds.
+- [Lending Rate Service](lending_rates.md)
+  - Fetches stock lending rates from Alpaca with a stub fallback.
 - [Optional Plugins]
   - Document as added.
 

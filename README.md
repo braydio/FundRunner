@@ -81,7 +81,23 @@ This menu demonstrates plotting, portfolio optimization and sentiment analysis w
 ## Yield Farming Mode
 
 Select option `9` in the main CLI menu to build simple stock lending or
-dividend portfolios from available cash.
+dividend portfolios from available cash. Lending strategies query
+Alpaca's stock lending API via the `LendingRateService`, which falls back
+to deterministic stub rates when live requests fail. See
+[docs/api/lending_rates.md](docs/api/lending_rates.md) for endpoint
+details.
+
+Example CLI session:
+
+```bash
+python main.py
+# ...
+Select an option: 9
+Select yield strategy [lending/dividend]: lending
+Symbols to consider (comma separated): AAPL,MSFT
+Allocation percent (0-1): 0.5
+Top N symbols: 2
+```
 
 ## Notifications
 
