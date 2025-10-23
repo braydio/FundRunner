@@ -8,7 +8,7 @@ This folder contains documentation for all **external APIs** and **plugin interf
   - Used for trading, account data, and market data feeds.
 - [Lending Rate Service](lending_rates.md)
   - Fetches stock lending rates from Alpaca with a stub fallback.
-- [Play-to-Transfer API](play_to_transfer.md)
+- [Plaid Transfer API](plaid_transfer.md)
   - Powers dashboard credit card payments and transfer visibility.
 - [Optional Plugins]
   - Document as added.

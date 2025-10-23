@@ -15,7 +15,7 @@ from fundrunner.services.notifications import (
     log_lending_rate_failure,
     log_lending_rate_success,
 )
-from fundrunner.services.play_to_transfer import PlayToTransferService
+from fundrunner.services.plaid_transfer import PlaidTransferService
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -37,7 +37,7 @@ class CLI:
         self.trade_manager = TradeManager()
         self.portfolio_manager = PortfolioManager()
         self.watchlist_manager = WatchlistManager()
-        self.transfer_service = PlayToTransferService()
+        self.transfer_service = PlaidTransferService()
         self.console = Console()
 
     def _format_money(self, value, currency="USD") -> str:
@@ -471,13 +471,14 @@ class CLI:
         self.console.print(table)
 
     def manage_transfers_menu(self) -> None:
-        """Interactive Play-to-Transfer management menu."""
+        """Interactive Plaid Transfer management menu."""
 
         service = getattr(self, "transfer_service", None)
         if not service or not service.enabled:
             self.console.print(
-                "[yellow]Play-to-Transfer integration is not configured. "
-                "Set PLAY_TO_TRANSFER_BASE_URL and PLAY_TO_TRANSFER_API_KEY to enable transfers.[/yellow]"
+                "[yellow]Plaid Transfer integration is not configured. "
+                "Ensure PLAID_CLIENT_ID, PLAID_SECRET, PLAID_TRANSFER_ACCESS_TOKEN, "
+                "and PLAID_TRANSFER_ACCOUNT_ID are set.[/yellow]"
             )
             Prompt.ask("Press Enter to return", default="")
             return
