@@ -71,3 +71,7 @@ DAILY_PROFIT_TARGET = float(os.getenv("DAILY_PROFIT_TARGET", "1000"))
 # Trading schedule (UTC times)
 PRE_MARKET_START = os.getenv("PRE_MARKET_START", "08:00")
 EXTENDED_HOURS_END = os.getenv("EXTENDED_HOURS_END", "20:00")
+
+# Play-to-Transfer API integration
+PLAY_TO_TRANSFER_BASE_URL = os.getenv("PLAY_TO_TRANSFER_BASE_URL", "")
+PLAY_TO_TRANSFER_API_KEY = os.getenv("PLAY_TO_TRANSFER_API_KEY", "")
