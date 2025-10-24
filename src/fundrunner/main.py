@@ -15,6 +15,7 @@ from fundrunner.services.notifications import (
     log_lending_rate_failure,
     log_lending_rate_success,
 )
+from fundrunner.services.plaid_transfer import PlaidTransferService
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -36,7 +37,91 @@ class CLI:
         self.trade_manager = TradeManager()
         self.portfolio_manager = PortfolioManager()
         self.watchlist_manager = WatchlistManager()
+        self.transfer_service = PlaidTransferService()
         self.console = Console()
+
+    def _format_money(self, value, currency="USD") -> str:
+        """Format numeric values as currency strings for display."""
+
+        if value is None:
+            return "N/A"
+        try:
+            amount = float(value)
+        except (TypeError, ValueError):
+            return "N/A"
+        currency_code = (currency or "USD").upper()
+        return f"{amount:,.2f} {currency_code}"
+
+    def _format_apr(self, apr) -> str:
+        """Render APR percentages consistently."""
+
+        if apr is None:
+            return "N/A"
+        try:
+            return f"{float(apr):.2f}%"
+        except (TypeError, ValueError):
+            return "N/A"
+
+    def _format_due_date(self, card: dict) -> str:
+        """Return a human friendly payment due date string."""
+
+        due_date = card.get("payment_due_date")
+        if isinstance(due_date, datetime):
+            return due_date.strftime("%Y-%m-%d")
+        raw_value = card.get("raw_payment_due_date")
+        return raw_value if raw_value else "N/A"
+
+    def _build_credit_card_table(self, cards: list[dict]) -> Table:
+        """Construct a rich :class:`Table` for credit card information."""
+
+        table = Table(title="Credit Cards", style="bold blue")
+        table.add_column("Card")
+        table.add_column("Balance", justify="right")
+        table.add_column("Min Payment", justify="right")
+        table.add_column("Payment Due", justify="center")
+        table.add_column("APR", justify="right")
+        table.add_column("Status", justify="center")
+
+        for card in cards:
+            label_parts = []
+            nickname = card.get("nickname")
+            if nickname:
+                label_parts.append(str(nickname))
+            last4 = card.get("last4")
+            if last4:
+                label_parts.append(f"•••• {last4}")
+            if not label_parts:
+                label_parts.append(card.get("id", "N/A"))
+            label = " ".join(label_parts)
+
+            table.add_row(
+                label,
+                self._format_money(card.get("balance"), card.get("currency")),
+                self._format_money(
+                    card.get("minimum_payment_due"), card.get("currency")
+                ),
+                self._format_due_date(card),
+                self._format_apr(card.get("apr")),
+                card.get("status", "N/A") or "N/A",
+            )
+        return table
+
+    def _fetch_credit_cards(self) -> list[dict]:
+        """Load credit card details when the transfers integration is enabled."""
+
+        service = getattr(self, "transfer_service", None)
+        if not service or not service.enabled:
+            return []
+
+        success, result = safe_execute(service.list_credit_cards)
+        if success:
+            return result
+
+        error_message = format_user_error(
+            result, "Unable to load credit card information"
+        )
+        self.console.print(f"[red]{error_message}[/red]")
+        return []
 
     def extract_account_field(self, account, field):
         return (
@@ -46,6 +131,8 @@ class CLI:
         )
 
     def view_account_info(self):
+        """Display consolidated account metrics and credit card insights."""
+
         def _view_account():
             account = self.portfolio_manager.view_account()
             positions = self.portfolio_manager.view_positions()
@@ -75,6 +162,10 @@ class CLI:
                 border_style="green",
             )
             self.console.print(info_panel)
+
+            credit_cards = self._fetch_credit_cards()
+            if credit_cards:
+                self.console.print(self._build_credit_card_table(credit_cards))
 
         success, result = safe_execute(_view_account)
         if not success:
@@ -180,6 +271,7 @@ class CLI:
             ("7", "Run Trading Bot"),
             ("8", "View Config"),
             ("9", "Run Yield Farmer"),
+            ("10", "Manage Transfers & Payments"),
             ("0", "Exit"),
         ]
 
@@ -279,6 +371,140 @@ class CLI:
                     self.console.print(f"[red]Error deleting watchlist: {e}[/red]")
 
             elif choice == "7":
+                break
+            else:
+                self.console.print("[red]Invalid option. Try again.[/red]")
+
+    def _handle_credit_card_payment(self) -> None:
+        """Prompt the user to submit a credit card payment."""
+
+        cards = self._fetch_credit_cards()
+        if not cards:
+            self.console.print(
+                "[yellow]No credit card accounts are available for payment.[/yellow]"
+            )
+            return
+
+        self.console.print(self._build_credit_card_table(cards))
+        card_id = Prompt.ask("Enter credit card ID (or card reference)").strip()
+        amount_str = Prompt.ask("Enter payment amount")
+        try:
+            amount = float(amount_str)
+        except ValueError:
+            self.console.print("[red]Amount must be numeric.[/red]")
+            return
+
+        currency = Prompt.ask("Currency code", default="USD").strip().upper() or "USD"
+        memo_input = Prompt.ask("Memo (optional)", default="")
+        memo = memo_input.strip() or None
+
+        def _submit_payment():
+            return self.transfer_service.submit_credit_card_payment(
+                card_id, amount, currency=currency, memo=memo
+            )
+
+        success, result = safe_execute(_submit_payment)
+        if success:
+            payment = result
+            timestamp = payment.get("created_at")
+            if isinstance(timestamp, datetime):
+                submitted = timestamp.strftime("%Y-%m-%d %H:%M")
+            else:
+                submitted = "N/A"
+            amount_display = self._format_money(
+                payment.get("amount"), payment.get("currency")
+            )
+            status = payment.get("status") or "submitted"
+            self.console.print(
+                f"[green]Payment {payment.get('id') or ''} for {amount_display} submitted "
+                f"({status}). Timestamp: {submitted}.[/green]"
+            )
+        else:
+            error_msg = format_user_error(
+                result, "Failed to submit credit card payment"
+            )
+            self.console.print(f"[red]{error_msg}[/red]")
+
+    def _render_transfer_table(self) -> None:
+        """Fetch and render recent transfers."""
+
+        def _load_transfers():
+            return self.transfer_service.list_transfers(limit=20)
+
+        success, result = safe_execute(_load_transfers)
+        if not success:
+            error_msg = format_user_error(
+                result, "Failed to retrieve transfer history"
+            )
+            self.console.print(f"[red]{error_msg}[/red]")
+            return
+
+        transfers = result
+        if not transfers:
+            self.console.print("[yellow]No transfers found.[/yellow]")
+            return
+
+        table = Table(title="Recent Transfers", style="bold blue")
+        table.add_column("ID", overflow="fold")
+        table.add_column("Type")
+        table.add_column("Status")
+        table.add_column("Amount", justify="right")
+        table.add_column("Created", justify="center")
+        table.add_column("Description")
+
+        for transfer in transfers:
+            created_at = transfer.created_at
+            created_display = (
+                created_at.strftime("%Y-%m-%d %H:%M")
+                if isinstance(created_at, datetime)
+                else "N/A"
+            )
+            table.add_row(
+                transfer.id or "N/A",
+                transfer.transfer_type or "N/A",
+                transfer.status or "N/A",
+                self._format_money(transfer.amount, transfer.currency),
+                created_display,
+                transfer.description or "",
+            )
+
+        self.console.print(table)
+
+    def manage_transfers_menu(self) -> None:
+        """Interactive Plaid Transfer management menu."""
+
+        service = getattr(self, "transfer_service", None)
+        if not service or not service.enabled:
+            self.console.print(
+                "[yellow]Plaid Transfer integration is not configured. "
+                "Ensure PLAID_CLIENT_ID, PLAID_SECRET, PLAID_TRANSFER_ACCESS_TOKEN, "
+                "and PLAID_TRANSFER_ACCOUNT_ID are set.[/yellow]"
+            )
+            Prompt.ask("Press Enter to return", default="")
+            return
+
+        while True:
+            self.console.print("\n[bold blue]--- Transfers & Payments ---[/bold blue]")
+            self.console.print("[bold yellow]1.[/bold yellow] View Credit Cards")
+            self.console.print("[bold yellow]2.[/bold yellow] Make Credit Card Payment")
+            self.console.print("[bold yellow]3.[/bold yellow] View Recent Transfers")
+            self.console.print("[bold yellow]4.[/bold yellow] Back to Main Menu")
+            choice = Prompt.ask("Select an option", default="4")
+
+            if choice == "1":
+                cards = self._fetch_credit_cards()
+                if cards:
+                    self.console.print(self._build_credit_card_table(cards))
+                else:
+                    self.console.print("[yellow]No credit cards available.[/yellow]")
+                Prompt.ask("\nPress Enter to continue", default="")
+            elif choice == "2":
+                self._handle_credit_card_payment()
+                Prompt.ask("\nPress Enter to continue", default="")
+            elif choice == "3":
+                self._render_transfer_table()
+                Prompt.ask("\nPress Enter to continue", default="")
+            elif choice == "4":
                 break
             else:
                 self.console.print("[red]Invalid option. Try again.[/red]")
@@ -752,7 +978,7 @@ class CLI:
             self.print_menu()
             choice = Prompt.ask(
                 "Select an option",
-                choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
+                choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
             )
 
             if choice == "1":
@@ -773,6 +999,8 @@ class CLI:
                 self.view_config_menu()
             elif choice == "9":
                 self.run_yield_farming()
+            elif choice == "10":
+                self.manage_transfers_menu()
             elif choice == "0":
                 self.console.print("[bold red]Exiting the app.[/bold red]")
                 sys.exit(0)
